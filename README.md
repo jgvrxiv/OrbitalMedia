@@ -57,6 +57,7 @@ Enter = terminar línea.
 | `js/models_res.js`, `models_com.js`, `models_ind.js` | Tipologías residenciales, comerciales e industriales. |
 | `js/buildings.js` | Servicios públicos y modelos de transporte. |
 | `js/roads.js` | Tipos de vía y malla de vías sobre el relieve. |
+| `js/roadnet.js` | Red vial como grafo (segmentos y nodos) proyectada sobre la cuadrícula. |
 | `js/scene.js` | Escena, relieve, cielo día/noche, cámara y selección. |
 | `js/game.js` | Estado, construcción y simulación (valor del suelo, demanda, economía). |
 | `js/transit.js` | Paradas, líneas, vehículos y tráfico ambiente. |

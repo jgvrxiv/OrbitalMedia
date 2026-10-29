@@ -60,6 +60,23 @@ sólo para vías y lotes. Es el camino de menor riesgo hacia curvas:
 recomendación es hacer el Nivel A cuando el juego ya esté maduro y dejar las curvas libres para una fase
 posterior.
 
+## 2b. Fase 1 implementada: red vial como grafo
+
+`js/roadnet.js` guarda las vías como **segmentos** (tramos rectos con tipo, eje, línea central, rango y
+carriles) unidos por **nodos** (puntas, cruces, uniones en "T" y cambios de tipo). Las casillas son una
+proyección del grafo (`rasterize`), así que todo lo demás (valor del suelo, acceso de lotes, malla de
+vías, buses y carros) sigue leyendo casillas y se ve igual que antes.
+
+- Construir agrega un segmento: si se superpone con otro sobre la misma línea, gana el tipo de mayor
+  rango y el de menor rango conserva la casilla del borde para quedar conectado.
+- Demoler corta los segmentos en la casilla demolida.
+- `normalize` une tramos idénticos contiguos y parte cada segmento en sus nodos.
+- Las partidas guardan el grafo (formato v3); las partidas v2, que guardaban casillas, se convierten al
+  cargar.
+
+Pendiente para la fase 2: que las rutas de bus y el tráfico recorran el grafo en vez de las casillas
+(hoy es equivalente porque los segmentos son ortogonales) y admitir segmentos a 45°.
+
 ## 3. Relieve: qué se implementó
 
 Se implementó **relieve real sin terraformación**:

@@ -9,6 +9,7 @@ import { S, N, tw, Trees, TileLayer, padOf, tileCenterH } from './scene.js';
 import { mats, rng, Builder } from './geom.js';
 import { InstPools } from './render.js';
 import { ROADS, buildRoadMesh } from './roads.js';
+import { createNet, lanesOf, addSegment, removeCell, rasterize, netFromTiles, serializeNet, loadNet } from './roadnet.js';
 import { buildModel, VARIANTS, typeName } from './models.js';
 import { pickResType, resPop } from './models_res.js';
 import { pickComType, COM_JOBS, COM_TYPES, tierOf } from './models_com.js';
@@ -45,6 +46,7 @@ const emptyStats = () => ({
 
 export const G = {
   grid: [],
+  net: createNet(), // red vial (grafo); las casillas son su proyección
   buildings: [],
   nextId: 1,
   money: COST.startMoney,
@@ -359,29 +361,48 @@ export function roadTileCheck(p, k) {
 }
 
 export function buildRoad(plan, k) {
-  let cost = 0;
-  const todo = [];
+  // agrupar el plan por posición a lo largo del eje: una posición sólo se construye si todos sus carriles caben
+  const byPos = new Map();
   for (const p of plan) {
-    const c = roadTileCheck(p, k);
-    if (!c.ok || c.same) continue;
-    cost += c.cost;
-    todo.push([p, c]);
+    const along = p.ax === 0 ? p.x : p.y;
+    if (!byPos.has(along)) byPos.set(along, []);
+    byPos.get(along).push(p);
   }
-  if (!todo.length) return false;
+  const ax = plan[0]?.ax ?? 0;
+  // línea central = coordenada lateral del carril menos su desplazamiento
+  const p0 = plan[0];
+  const line = p0 ? (ax === 0 ? p0.y : p0.x) - lanesOf(k).offs[p0.li] : 0;
+  let cost = 0, changes = 0;
+  const valid = [];
+  for (const [along, lanes] of [...byPos.entries()].sort((a, b) => a[0] - b[0])) {
+    const checks = lanes.map((p) => roadTileCheck(p, k));
+    if (checks.some((c) => !c.ok)) continue;
+    for (const c of checks) if (!c.same) { cost += c.cost; changes++; }
+    valid.push(along);
+  }
+  if (!changes) return false;
   if (!spend(cost)) return false;
-  for (const [p, c] of todo) {
-    const t = G.grid[p.y][p.x];
-    if (c.cross) {
-      const keep = ROADS[t.road.k].rank >= ROADS[k].rank ? t.road.k : k;
-      t.road = { k: keep, ax: 2, c: false };
-    } else t.road = { k, ax: p.ax, c: !!p.c };
-    t.zone = 0;
+  // tramos continuos de posiciones válidas -> segmentos del grafo
+  const { offs, cIdx } = lanesOf(k);
+  let start = null, prev = null;
+  const flushRun = () => { if (start !== null) addSegment(G.net, { k, ax, line, s0: start, s1: prev, offs, cIdx }); };
+  for (const a of valid) {
+    if (prev === null || a !== prev + 1) { flushRun(); start = a; }
+    prev = a;
   }
+  flushRun();
+  applyNet();
+  return true;
+}
+
+// proyecta la red sobre las casillas y actualiza todo lo que depende de las vías
+function applyNet() {
+  rasterize(G.net, G.grid, N);
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) { const t = G.grid[y][x]; if (t.road) t.zone = 0; }
   markDirty('all');
   flush();
   G.hooks.roadsChanged();
   G.onChange();
-  return true;
 }
 
 export function rectTiles(a, b) {
@@ -475,15 +496,12 @@ export function bulldoze(tiles) {
     if (!t) continue;
     if (t.stop) { G.hooks.removeStop(t.stop); n++; }
     else if (t.bld) { removeBuilding(t.bld); n++; }
-    else if (t.road) { t.road = null; n++; }
+    else if (t.road) { removeCell(G.net, p.x, p.y); n++; }
     else if (t.zone) { t.zone = 0; n++; }
   }
   if (!n) return false;
-  markDirty('all');
   G.dirty.pollLv = true;
-  flush();
-  G.hooks.roadsChanged();
-  G.onChange();
+  applyNet();
   return true;
 }
 
@@ -618,14 +636,13 @@ export function renderStats() { return pools ? pools.stats() : { draws: 0, inst:
 
 // ---------- guardado ----------
 export function serialize() {
-  const roads = [], zones = [];
+  const zones = [];
   for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
     const t = G.grid[y][x];
-    if (t.road) roads.push([x, y, t.road.k, t.road.ax, t.road.c ? 1 : 0]);
-    else if (t.zone) zones.push([x, y, t.zone]);
+    if (!t.road && t.zone) zones.push([x, y, t.zone]);
   }
   return {
-    v: 2, terrain: S.terrain, seed: G.seed, money: G.money, month: G.month, ticks: G.ticks, roads, zones,
+    v: 3, terrain: S.terrain, seed: G.seed, money: G.money, month: G.month, ticks: G.ticks, net: serializeNet(G.net), zones,
     blds: G.buildings.map((b) => ({ kind: b.kind, d: b.d, e: b.e, type: b.type, v: b.v, x: b.x, y: b.y, w: b.w, h: b.h, rot: b.rot, key: b.key })),
   };
 }
@@ -637,6 +654,7 @@ export function clearAll() {
     const t = G.grid[y][x];
     t.road = null; t.zone = 0; t.bld = null;
   }
+  G.net = createNet();
   G.growing.length = 0;
   G.month = 0; G.ticks = 0; G.acc = 0;
   G.dem = { r: 0.4, c: 0, i: 0 };
@@ -648,10 +666,26 @@ export function clearAll() {
 export function load(d) {
   clearAll();
   G.money = d.money; G.month = d.month; G.ticks = d.ticks || 0;
-  for (const [x, y, k, ax, c] of d.roads) G.grid[y][x].road = { k, ax, c: !!c };
+  // v3 guarda el grafo; las partidas v2 guardaban casillas sueltas y se convierten
+  G.net = d.net ? loadNet(d.net) : netFromTiles(d.roads || []);
+  rasterize(G.net, G.grid, N);
   for (const [x, y, z] of d.zones) G.grid[y][x].zone = z;
   for (const b of d.blds) addBuilding(b);
   for (const b of G.buildings) b.grow = 0.999;
   markDirty('all');
   flush();
+  quickStats();
+}
+
+// población y empleo sin avanzar la simulación (para que el panel no quede en cero tras cargar en pausa)
+function quickStats() {
+  const st = G.stats;
+  const byE = [0, 0, 0, 0, 0, 0], byD = [0, 0, 0];
+  let pop = 0, jobs = 0;
+  for (const b of G.buildings) {
+    jobs += b.jobs;
+    if (b.kind !== 'res') continue;
+    pop += b.pop; byE[b.e - 1] += b.pop; byD[b.d - 1] += b.pop;
+  }
+  Object.assign(st, { pop, jobs, workers: pop * 0.5, emp: pop ? Math.min(1, jobs / (pop * 0.5)) : 1, byE, byD, bldCount: G.buildings.length });
 }
