@@ -321,7 +321,7 @@ function diagRibbon(B, seg, net, junctions) {
   const W = R.meters;
   const L = 0.03;
   // recorte en los extremos: hasta donde empieza el polígono del cruce (en unidades de s: √2 casillas)
-  const jr = (s) => junctions.get(s + ',' + seg.dy * (s - seg.line));
+  const jr = (s) => junctions.get(s + ',' + seg.dy * (s - seg.line) + ':' + seg.id);
   const trim0 = jr(seg.s0) !== undefined ? jr(seg.s0) / Math.SQRT2 : 0;
   const trim1 = jr(seg.s1) !== undefined ? jr(seg.s1) / Math.SQRT2 : 0;
   const sA = seg.s0 + trim0, sB = seg.s1 - trim1;
@@ -332,7 +332,7 @@ function diagRibbon(B, seg, net, junctions) {
   const m = diagLines(R.w) - 1;
   const P = (s, u) => {
     // eje de la banda: a medio camino entre la primera y la última línea diagonal
-    const cx = s + m / 4 - N / 2 + 0.5, cz = seg.dy * (s - seg.line - m / 4) - N / 2 + 0.5;
+    const cx = s - N / 2 + 0.5, cz = seg.dy * (s - seg.line) - N / 2 + 0.5; void m;
     const o = (u - W / 2) / MPT;
     return [cx + nx * o, cz + nz * o];
   };
@@ -372,7 +372,7 @@ function diagRibbon(B, seg, net, junctions) {
     }
     if (seg.k === 'tierra') for (const o of [0.3, 0.7]) quad(s, s1, W * o - 0.4, W * o + 0.4, L + 0.002, '#7d6342');
     // palmas o árboles en los separadores
-    if (idx % 4 === 2) {
+    if (idx % 4 === 2 && s > sA + 0.8 && s < sB - 0.8) {
       for (const st of lanes) {
         if (st.t !== 'median') continue;
         const [px, pz] = P(s + 0.25, (st.u0 + st.u1) / 2);
@@ -425,30 +425,39 @@ function planJunctions(net) {
       const hw = halfWidths(seg.k);
       if (seg.ax === 3) {
         const m = diagLines(ROADS[seg.k].w) - 1;
-        return { seg, d: [sgn * Math.SQRT1_2, sgn * seg.dy * Math.SQRT1_2], o: [node.x + m / 4, node.y - seg.dy * m / 4], hw, diag: true };
+        return { seg, d: [sgn * Math.SQRT1_2, sgn * seg.dy * Math.SQRT1_2], o: [node.x, node.y], hw, diag: true }; void m;
       }
       const mid = (seg.offs[0] + seg.offs[seg.offs.length - 1]) / 2;
       const o = seg.ax === 0 ? [node.x, node.y + mid] : [node.x + mid, node.y];
       return { seg, d: seg.ax === 0 ? [sgn, 0] : [0, sgn], o, hw, diag: false };
     });
-    const maxOrtho = Math.max(0, ...arms.filter((a) => !a.diag).map((a) => a.hw.full));
+    // cada brazo se corta en su esquina: donde su borde cruza el borde del brazo vecino (orden angular)
+    arms.sort((p, q) => Math.atan2(p.d[1], p.d[0]) - Math.atan2(q.d[1], q.d[0]));
+    const n = arms.length;
+    for (const a of arms) a.raw = 0.5;
+    for (let i = 0; i < n; i++) {
+      const a = arms[i], b = arms[(i + 1) % n];
+      const na = [-a.d[1], a.d[0]], nb = [-b.d[1], b.d[0]];
+      const c = isect([a.o[0] + na[0] * a.hw.full, a.o[1] + na[1] * a.hw.full], a.d, [b.o[0] - nb[0] * b.hw.full, b.o[1] - nb[1] * b.hw.full], b.d);
+      if (!c) continue;
+      const ta = (c[0] - a.o[0]) * a.d[0] + (c[1] - a.o[1]) * a.d[1];
+      const tb = (c[0] - b.o[0]) * b.d[0] + (c[1] - b.o[1]) * b.d[1];
+      if (ta > 0 && tb > 0 && ta < 4 && tb < 4) { a.raw = Math.max(a.raw, ta); b.raw = Math.max(b.raw, tb); }
+    }
     for (const a of arms) {
-      if (a.diag) {
-        // la diagonal debe salir del todo de la franja de las demás vías antes de empezar su cinta
-        const other = Math.max(maxOrtho, ...arms.filter((b) => b !== a).map((b) => b.hw.full));
-        a.cut = (other + a.hw.full) * Math.SQRT2 + 0.1;
-      } else {
-        // los brazos rectos se cortan en el borde de la casilla siguiente al nodo
-        a.cut = 1.5;
-        for (let k = 0; k <= 1; k++) for (const off of a.seg.offs) {
-          const s = (a.seg.ax === 0 ? node.x : node.y) + k * a.d[a.seg.ax === 0 ? 0 : 1];
-          const [x, y] = a.seg.ax === 0 ? [s, a.seg.line + off] : [a.seg.line + off, s];
+      if (a.diag) a.cut = a.raw + 0.05;
+      else {
+        // las casillas rectas se dibujan enteras: el corte se lleva al borde de casilla siguiente
+        const kmax = Math.max(0, Math.ceil(a.raw - 0.5 - 1e-6));
+        a.cut = kmax + 0.5;
+        for (let k = 0; k <= kmax; k++) for (const off of a.seg.offs) {
+          const s0 = (a.seg.ax === 0 ? node.x : node.y) + k * a.d[a.seg.ax === 0 ? 0 : 1];
+          const [x, y] = a.seg.ax === 0 ? [s0, a.seg.line + off] : [a.seg.line + off, s0];
           covered.add(y * N + x);
         }
       }
     }
-    for (const a of arms) if (a.diag) trim.set(key, Math.max(trim.get(key) || 0, a.cut));
-    arms.sort((p, q) => Math.atan2(p.d[1], p.d[0]) - Math.atan2(q.d[1], q.d[0]));
+    for (const a of arms) if (a.diag) trim.set(key + ':' + a.seg.id, a.cut);
     list.push({ node, arms });
   }
   return { list, covered, trim };
@@ -515,7 +524,7 @@ function drawJunction(B, j) {
       const t0 = -a.hw.cw + (i + 0.2) * ((2 * a.hw.cw) / cnt), t1 = t0 + 0.6 * ((2 * a.hw.cw) / cnt);
       const q = (u, v) => W([a.o[0] + a.d[0] * u + n[0] * v, a.o[1] + a.d[1] * u + n[1] * v]);
       const y = (p) => [p[0], H(p[0], p[1]) + L + 0.04, p[1]];
-      B.quad(y(q(a.cut - 0.2, t0)), y(q(a.cut - 0.2, t1)), y(q(a.cut - 0.05, t1)), y(q(a.cut - 0.05, t0)), WHITE);
+      B.quad(y(q(a.raw + 0.03, t0)), y(q(a.raw + 0.03, t1)), y(q(a.raw + 0.2, t1)), y(q(a.raw + 0.2, t0)), WHITE);
     }
   }
 }

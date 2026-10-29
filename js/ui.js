@@ -307,7 +307,7 @@ function diagPreview(plan, k, prev) {
   const m = diagLines(ROADS[k].w) - 1;
   const lanes = Math.max(1, Math.round(ROADS[k].meters / 12));
   const ux = Math.SQRT1_2, uy = dy * Math.SQRT1_2, nx = -dy * Math.SQRT1_2, ny = Math.SQRT1_2;
-  const ox = s0 + m / 4, oy = dy * (s0 - line - m / 4);
+  const ox = s0, oy = dy * (s0 - line); void m;
   const L = (s1 - s0) * Math.SQRT2;
   const ang = Math.atan2(nx, ny);
   const out = [];

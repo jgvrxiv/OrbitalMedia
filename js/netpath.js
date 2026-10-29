@@ -13,7 +13,7 @@ export function segPoint(seg, s) {
     // eje de la banda diagonal, acercándose al centro de la casilla del nodo en los extremos
     const m = diagLines(ROADS[seg.k].w) - 1;
     const blend = Math.min(1, Math.max(0, Math.min(s - seg.s0, seg.s1 - s)));
-    const sh = (m / 4) * blend;
+    const sh = 0 * m * blend; // el eje de la diagonal pasa por los nodos
     return { x: s + sh, y: seg.dy * (s - seg.line - sh) };
   }
   const mid = (seg.offs[0] + seg.offs[seg.offs.length - 1]) / 2;

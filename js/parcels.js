@@ -70,8 +70,8 @@ function diagCandidates(seg, R, N, region, cand) {
   const m = diagLines(R.w) - 1;
   const ux = Math.SQRT1_2, uy = seg.dy * Math.SQRT1_2; // dirección de la vía
   const nx = -seg.dy * Math.SQRT1_2, ny = Math.SQRT1_2; // normal
-  const half = (m + 1) / (2 * Math.SQRT2); // medio ancho de la banda de la vía, en casillas
-  const ox = seg.s0 + m / 4, oy = seg.dy * (seg.s0 - seg.line - m / 4); // eje en el inicio
+  const half = R.meters / 2 / 12 + 0.05; // medio ancho real de la vía, en casillas
+  const ox = seg.s0, oy = seg.dy * (seg.s0 - seg.line); // eje en el inicio (pasa por los nodos)
   const L = (seg.s1 - seg.s0) * Math.SQRT2;
   const reach = half + DIAG_DEPTH;
   const x0 = Math.floor(Math.min(seg.s0, seg.s1) - reach - 2), x1 = Math.ceil(Math.max(seg.s0, seg.s1) + reach + 2);
