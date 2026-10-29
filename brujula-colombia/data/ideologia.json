@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "escala": "Cada respuesta va de -2 (muy en desacuerdo) a +2 (muy de acuerdo). 'dir' indica hacia qué polo empuja estar de acuerdo: 1 = polo izquierdo del eje, -1 = polo derecho.",
+  "ejes": [
+    { "id": "eco", "nombre": "Economía", "izq": "Estado", "der": "Mercado", "color": "#e4572e" },
+    { "id": "paz", "nombre": "Paz y seguridad", "izq": "Negociación", "der": "Mano dura", "color": "#2e86ab" },
+    { "id": "ter", "nombre": "Territorio", "izq": "Regiones", "der": "Centralismo", "color": "#f3a712" },
+    { "id": "amb", "nombre": "Ambiente y minería", "izq": "Transición", "der": "Extractivismo", "color": "#3bb273" },
+    { "id": "dro", "nombre": "Drogas", "izq": "Regulación", "der": "Prohibición", "color": "#7768ae" },
+    { "id": "soc", "nombre": "Valores sociales", "izq": "Progresista", "der": "Tradicional", "color": "#d1495b" },
+    { "id": "ins", "nombre": "Instituciones", "izq": "Cambio profundo", "der": "Estabilidad", "color": "#00798c" },
+    { "id": "ext", "nombre": "Relaciones exteriores", "izq": "Autonomía / Sur global", "der": "Alianza con EE. UU.", "color": "#8d6a9f" }
+  ],
+  "preguntas": [
+    { "eje": "eco", "dir": 1, "texto": "La salud debería ser administrada principalmente por el Estado y no por EPS privadas." },
+    { "eje": "eco", "dir": 1, "texto": "Las pensiones deberían manejarse sobre todo desde Colpensiones (público) y no en fondos privados." },
+    { "eje": "eco", "dir": -1, "texto": "Bajar impuestos a las empresas genera más empleo que subir el gasto público." },
+    { "eje": "eco", "dir": 1, "texto": "El salario mínimo debería subir por encima de la inflación aunque algunas empresas lo vean difícil de pagar." },
+    { "eje": "eco", "dir": -1, "texto": "Es mejor privatizar empresas públicas ineficientes que mantenerlas con plata del Estado." },
+
+    { "eje": "paz", "dir": 1, "texto": "El Estado debe seguir negociando con grupos armados como el ELN o las disidencias." },
+    { "eje": "paz", "dir": -1, "texto": "La prioridad en seguridad es más pie de fuerza y operaciones militares contra los grupos armados." },
+    { "eje": "paz", "dir": 1, "texto": "El Acuerdo de Paz de 2016 debe cumplirse completamente, incluida la JEP." },
+    { "eje": "paz", "dir": -1, "texto": "Los civiles deberían poder portar armas legalmente con más facilidad para defenderse." },
+
+    { "eje": "ter", "dir": 1, "texto": "Los departamentos y municipios deberían recibir más recursos y decidir más sin depender de Bogotá." },
+    { "eje": "ter", "dir": 1, "texto": "Las comunidades indígenas, afro y campesinas deben tener la última palabra sobre proyectos en sus territorios (consulta previa vinculante)." },
+    { "eje": "ter", "dir": -1, "texto": "Las grandes decisiones del país funcionan mejor cuando se toman desde el Gobierno nacional." },
+
+    { "eje": "amb", "dir": 1, "texto": "Colombia no debería firmar nuevos contratos de exploración de petróleo y gas." },
+    { "eje": "amb", "dir": -1, "texto": "El fracking debería permitirse si ayuda a garantizar la autosuficiencia energética." },
+    { "eje": "amb", "dir": 1, "texto": "Proteger la Amazonía y los páramos debe estar por encima de los ingresos mineros." },
+    { "eje": "amb", "dir": -1, "texto": "La minería a gran escala es clave para el desarrollo de las regiones." },
+
+    { "eje": "dro", "dir": 1, "texto": "El Estado debería regular el mercado de cannabis para uso adulto." },
+    { "eje": "dro", "dir": -1, "texto": "La erradicación forzada (incluida la aspersión) es necesaria para reducir los cultivos de coca." },
+    { "eje": "dro", "dir": 1, "texto": "Colombia debería liderar a nivel internacional el fin de la 'guerra contra las drogas'." },
+
+    { "eje": "soc", "dir": 1, "texto": "El aborto debe seguir siendo legal según lo establecido por la Corte Constitucional." },
+    { "eje": "soc", "dir": 1, "texto": "Las parejas del mismo sexo deben tener exactamente los mismos derechos, incluida la adopción." },
+    { "eje": "soc", "dir": -1, "texto": "La educación sexual en colegios debería depender más de los padres que del Ministerio de Educación." },
+    { "eje": "soc", "dir": 1, "texto": "La eutanasia y la muerte digna son un derecho que el Estado debe garantizar." },
+
+    { "eje": "ins", "dir": 1, "texto": "Colombia necesita una Asamblea Nacional Constituyente." },
+    { "eje": "ins", "dir": -1, "texto": "Las reformas grandes deben pasar siempre por el Congreso aunque eso las haga lentas." },
+    { "eje": "ins", "dir": 1, "texto": "Las grandes élites económicas tienen demasiado poder sobre la política del país." },
+    { "eje": "ins", "dir": -1, "texto": "La independencia del Banco de la República y de las Cortes debe defenderse por encima de cualquier gobierno." },
+
+    { "eje": "ext", "dir": -1, "texto": "Estados Unidos debe seguir siendo el socio principal de Colombia en seguridad y comercio." },
+    { "eje": "ext", "dir": 1, "texto": "Colombia debería acercarse más a China y a otros países de América Latina aunque incomode a EE. UU." },
+    { "eje": "ext", "dir": 1, "texto": "Hay que mantener relaciones normales con el gobierno de Venezuela, sin importar quién gobierne." }
+  ],
+  "ideologias": [
+    { "nombre": "Izquierda transformadora", "desc": "Estado fuerte en lo económico, paz negociada, transición energética y cambio institucional profundo.", "v": { "eco": -80, "paz": -75, "ter": -40, "amb": -80, "dro": -70, "soc": -60, "ins": -70, "ext": -50 } },
+    { "nombre": "Socialdemocracia", "desc": "Mercado con un Estado de bienestar robusto, reformas graduales y defensa del Acuerdo de Paz.", "v": { "eco": -45, "paz": -50, "ter": -30, "amb": -45, "dro": -40, "soc": -45, "ins": 10, "ext": -10 } },
+    { "nombre": "Centro liberal", "desc": "Institucionalidad, economía de mercado con regulación, progresismo social moderado.", "v": { "eco": 15, "paz": -15, "ter": -10, "amb": -15, "dro": -30, "soc": -40, "ins": 60, "ext": 25 } },
+    { "nombre": "Ambientalismo regionalista", "desc": "La prioridad es el territorio, el agua y las comunidades, por encima de la renta extractiva.", "v": { "eco": -35, "paz": -45, "ter": -80, "amb": -90, "dro": -35, "soc": -35, "ins": -20, "ext": -20 } },
+    { "nombre": "Centro pragmático", "desc": "Sin casarse con ningún polo: resultados, gestión y acuerdos.", "v": { "eco": 0, "paz": 0, "ter": 0, "amb": 0, "dro": 0, "soc": 0, "ins": 30, "ext": 10 } },
+    { "nombre": "Liberalismo económico", "desc": "Mercado, empresa privada y Estado pequeño; libertades individuales también en lo social.", "v": { "eco": 80, "paz": 20, "ter": 10, "amb": 40, "dro": -40, "soc": -30, "ins": 50, "ext": 50 } },
+    { "nombre": "Centroderecha institucional", "desc": "Seguridad, confianza inversionista y respeto a las instituciones.", "v": { "eco": 50, "paz": 45, "ter": 10, "amb": 45, "dro": 40, "soc": 30, "ins": 60, "ext": 60 } },
+    { "nombre": "Derecha de seguridad", "desc": "Mano firme contra los grupos armados, prohibición y alianza estrecha con EE. UU.", "v": { "eco": 55, "paz": 85, "ter": 30, "amb": 60, "dro": 80, "soc": 50, "ins": 20, "ext": 80 } },
+    { "nombre": "Conservadurismo tradicional", "desc": "Familia, religión y valores tradicionales en el centro de la política.", "v": { "eco": 25, "paz": 55, "ter": 20, "amb": 30, "dro": 75, "soc": 85, "ins": 40, "ext": 50 } },
+    { "nombre": "Populismo antisistema", "desc": "Contra 'los de siempre': ruptura con el establecimiento, sea desde la izquierda o desde la derecha.", "v": { "eco": -10, "paz": 30, "ter": -20, "amb": 10, "dro": 20, "soc": 20, "ins": -80, "ext": 0 } }
+  ]
+}

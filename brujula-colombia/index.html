@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Brújula Colombia</title>
+  <meta name="description" content="Descubre tu ideología política en ejes colombianos y compara tus posiciones con los candidatos de la próxima elección.">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="top">
+    <a class="logo" href="#inicio">Brújula<span>Colombia</span></a>
+  </header>
+
+  <main id="app">
+    <section id="inicio" class="vista">
+      <h1>¿Dónde estás en el mapa político colombiano?</h1>
+      <p class="lead">Dos tests: uno sobre tus ideas de fondo y otro para ver con qué candidato coincides más.</p>
+      <div class="tarjetas">
+        <button class="tarjeta" data-ir="ideologia">
+          <strong>Test ideológico</strong>
+          <span>30 preguntas · 8 ejes colombianos · ~6 min</span>
+        </button>
+        <button class="tarjeta" data-ir="elecciones">
+          <strong>Test de candidatos</strong>
+          <span id="eleccion-resumen">Cargando elección…</span>
+        </button>
+      </div>
+      <p class="nota">Tus respuestas no salen de tu navegador. Esta herramienta no está afiliada a ningún partido.</p>
+    </section>
+
+    <section id="test" class="vista" hidden>
+      <div class="progreso"><div id="barra"></div></div>
+      <p id="contador" class="nota"></p>
+      <p id="tema" class="tema"></p>
+      <h2 id="pregunta"></h2>
+      <div class="opciones" id="opciones"></div>
+      <div class="nav">
+        <button id="atras" class="sec">← Atrás</button>
+      </div>
+    </section>
+
+    <section id="resultado" class="vista" hidden></section>
+  </main>
+
+  <footer class="pie">Hecho por Orbital Media CO</footer>
+  <script src="app.js"></script>
+</body>
+</html>

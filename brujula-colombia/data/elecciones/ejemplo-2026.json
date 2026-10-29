@@ -1,0 +1,44 @@
+{
+  "id": "ejemplo-2026",
+  "nombre": "Elección de ejemplo",
+  "cargo": "Presidencia de la República",
+  "fecha": "2026-05-31",
+  "aviso": "DATOS DE EJEMPLO. Los candidatos son ficticios. Antes de publicar, reemplázalos por los candidatos reales con posiciones verificadas y una fuente para cada respuesta.",
+  "actualizado": "2026-10-29",
+  "preguntas": [
+    { "id": "salud", "tema": "Salud", "texto": "Las EPS deben desaparecer y la salud debe manejarse desde el Estado." },
+    { "id": "pensiones", "tema": "Pensiones", "texto": "La reforma pensional que fortalece a Colpensiones debe mantenerse." },
+    { "id": "eln", "tema": "Paz", "texto": "Hay que retomar o continuar los diálogos con el ELN." },
+    { "id": "pie-fuerza", "tema": "Seguridad", "texto": "Hay que aumentar el pie de fuerza y el presupuesto militar de forma significativa." },
+    { "id": "petroleo", "tema": "Energía", "texto": "Colombia debe volver a firmar contratos de exploración petrolera." },
+    { "id": "fracking", "tema": "Energía", "texto": "Se debe permitir el fracking." },
+    { "id": "cannabis", "tema": "Drogas", "texto": "Se debe legalizar el cannabis de uso adulto." },
+    { "id": "aspersion", "tema": "Drogas", "texto": "Se debe volver a la aspersión aérea contra los cultivos de coca." },
+    { "id": "constituyente", "tema": "Instituciones", "texto": "Colombia necesita una Asamblea Nacional Constituyente." },
+    { "id": "impuestos", "tema": "Economía", "texto": "Se deben bajar los impuestos a las empresas." },
+    { "id": "aborto", "tema": "Sociedad", "texto": "El aborto debe seguir siendo legal en los términos actuales." },
+    { "id": "venezuela", "tema": "Exterior", "texto": "Hay que mantener relaciones diplomáticas y comerciales plenas con Venezuela." }
+  ],
+  "candidatos": [
+    {
+      "id": "a", "nombre": "Candidata A (ficticia)", "partido": "Movimiento Ejemplo Verde", "color": "#3bb273",
+      "respuestas": { "salud": 1, "pensiones": 2, "eln": 1, "pie-fuerza": -1, "petroleo": -2, "fracking": -2, "cannabis": 2, "aspersion": -2, "constituyente": -1, "impuestos": -1, "aborto": 2, "venezuela": 1 },
+      "fuentes": { "salud": "https://ejemplo.org/programa-a#salud" }
+    },
+    {
+      "id": "b", "nombre": "Candidato B (ficticio)", "partido": "Partido Ejemplo Popular", "color": "#e4572e",
+      "respuestas": { "salud": 2, "pensiones": 2, "eln": 2, "pie-fuerza": -1, "petroleo": -1, "fracking": -2, "cannabis": 1, "aspersion": -2, "constituyente": 2, "impuestos": -2, "aborto": 1, "venezuela": 2 },
+      "fuentes": {}
+    },
+    {
+      "id": "c", "nombre": "Candidata C (ficticia)", "partido": "Alianza Ejemplo de Centro", "color": "#f3a712",
+      "respuestas": { "salud": -1, "pensiones": 0, "eln": 0, "pie-fuerza": 1, "petroleo": 1, "fracking": -1, "cannabis": 1, "aspersion": -1, "constituyente": -2, "impuestos": 1, "aborto": 1, "venezuela": 0 },
+      "fuentes": {}
+    },
+    {
+      "id": "d", "nombre": "Candidato D (ficticio)", "partido": "Partido Ejemplo Orden", "color": "#2e86ab",
+      "respuestas": { "salud": -2, "pensiones": -2, "eln": -2, "pie-fuerza": 2, "petroleo": 2, "fracking": 2, "cannabis": -2, "aspersion": 2, "constituyente": -1, "impuestos": 2, "aborto": -2, "venezuela": -2 },
+      "fuentes": {}
+    }
+  ]
+}
