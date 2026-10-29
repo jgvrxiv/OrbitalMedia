@@ -127,7 +127,7 @@ export function setTool(t) {
   const msg = {
     inspect: 'Clic en un edificio, lote o parada para ver sus datos · arrastra para mover el mapa',
     bulldoze: 'Arrastra un rectángulo para demoler vías, zonas, edificios o paradas',
-    road: () => `${ROADS[t.k].name}: arrastra para trazar en línea recta (${u2m(ROADS[t.k].w)} m de ancho)`,
+    road: () => `${ROADS[t.k].name}: arrastra para trazar en línea recta (${u2m(ROADS[t.k].w)} m de ancho)` + (ROADS[t.k].w === 1 ? ". Si arrastras cerca de 45° se traza en diagonal" : ""),
     zone: () => `Arrastra un rectángulo: ${ZONES[t.z].name}. El estrato lo define el valor del suelo.`,
     pub: () => `${PUBLIC[t.key].name}: debe quedar junto a una vía · ${PUBLIC[t.key].desc}`,
     stop: () => (t.st === 'bus' ? 'Haz clic en una calle, avenida o troncal para poner un paradero' : 'Haz clic en un lote libre para poner una estación de Metrocable'),
@@ -211,7 +211,7 @@ function updatePreview() {
       return { x: p.x, y: p.y, ok: c.ok, why: c.why };
     });
     setPreview(prev);
-    if (UI.drag) info.textContent = `${ROADS[T0.k].name}: ${u2m(plan.length / ROADS[T0.k].w)} m de largo · costo ${fmt(cost)}` + (bad ? ` · ${bad} casillas bloqueadas (edificios o pendiente)` : '');
+    if (UI.drag) info.textContent = `${ROADS[T0.k].name}: ${Math.round(u2m(plan.diag ? (plan.diag.s1 - plan.diag.s0) * Math.SQRT2 : plan.length / ROADS[T0.k].w))} m de largo${plan.diag ? ' (diagonal)' : ''} · costo ${fmt(cost)}` + (bad ? ` · ${bad} casillas bloqueadas (edificios o pendiente)` : '');
   } else if (T0.type === 'zone') {
     const tiles = UI.drag ? rectTiles(UI.drag.start, h) : [{ x: h.x, y: h.y }];
     const prev = tiles.map((p) => ({ ...p, ok: zoneOk(p.x, p.y, T0.z), color: zoneOk(p.x, p.y, T0.z) ? ZONES[T0.z].color : null }));

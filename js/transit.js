@@ -6,6 +6,7 @@ import { Builder, makeMesh, mats } from './geom.js';
 import { buildBusStop, buildBRTStation, buildCableStation, buildBus, buildCabin, buildCar, CABLE_Y } from './buildings.js';
 import { G, tile, inb, spend, markDirty, flush, roadAt } from './game.js';
 import { ROADS } from './roads.js';
+import { route, laneOffset, segPoint, segDir, spawnWalker, stepWalker } from './netpath.js';
 
 export const TRANSIT = {
   bus: { stopCost: 25000, stopUpkeep: 60, vehCost: 80000, vehUpkeep: 400, cap: 60, fare: 40, speed: 2.2, name: 'Bus' },
@@ -91,61 +92,18 @@ export function removeStop(stop) {
   G.onToast('Parada eliminada', 'info');
 }
 
-// ---------- rutas (Dijkstra sobre vías que admiten buses; la troncal es más rápida) ----------
-function tileCost(x, y) {
-  const r = roadAt(x, y);
-  if (!r) return 1;
-  const R = ROADS[r.k];
-  const sp = r.k === 'troncal' && r.c ? R.busSpeed : R.speed;
-  return 1 / Math.max(0.3, sp);
-}
+// ---------- rutas: Dijkstra sobre el grafo vial (la troncal es más rápida para los buses) ----------
+const busAllow = (k) => ROADS[k].bus;
+const busSpeed = (k, seg) => (k === 'troncal' && seg.cIdx >= 0 ? ROADS[k].busSpeed : ROADS[k].speed);
 
-function findPath(ax, ay, bx, by) {
-  if (ax === bx && ay === by) return [[ax, ay]];
-  const dist = new Float64Array(N * N).fill(Infinity);
-  const prev = new Int32Array(N * N).fill(-1);
-  const start = ay * N + ax, end = by * N + bx;
-  dist[start] = 0;
-  const heap = [[0, start]];
-  const push = (it) => {
-    heap.push(it);
-    let i = heap.length - 1;
-    while (i > 0) { const p = (i - 1) >> 1; if (heap[p][0] <= heap[i][0]) break; [heap[p], heap[i]] = [heap[i], heap[p]]; i = p; }
-  };
-  const pop = () => {
-    const top = heap[0], last = heap.pop();
-    if (heap.length) {
-      heap[0] = last;
-      let i = 0;
-      for (;;) {
-        const l = 2 * i + 1, r = l + 1;
-        let m = i;
-        if (l < heap.length && heap[l][0] < heap[m][0]) m = l;
-        if (r < heap.length && heap[r][0] < heap[m][0]) m = r;
-        if (m === i) break;
-        [heap[m], heap[i]] = [heap[i], heap[m]]; i = m;
-      }
-    }
-    return top;
-  };
-  while (heap.length) {
-    const [d, c] = pop();
-    if (c === end) break;
-    if (d > dist[c]) continue;
-    const cx = c % N, cy = (c / N) | 0;
-    for (const [dx, dy] of DIRS) {
-      const nx = cx + dx, ny = cy + dy;
-      if (!inb(nx, ny) || !busOk(nx, ny)) continue;
-      const ni = ny * N + nx;
-      const nd = d + tileCost(nx, ny);
-      if (nd < dist[ni]) { dist[ni] = nd; prev[ni] = c; push([nd, ni]); }
-    }
-  }
-  if (prev[end] === -1) return null;
-  const out = [];
-  for (let c = end; c !== start; c = prev[c]) out.push([c % N, (c / N) | 0]);
-  out.push([ax, ay]);
-  return out.reverse();
+// tramo de bus entre dos paradas -> puntos en el mundo (con carril y velocidad de cada tramo)
+function busLeg(a, b) {
+  const pts = route(G.net, G.grid, a, b, busAllow, busSpeed);
+  if (!pts) return null;
+  return pts.map((p) => ({
+    x: p.x - N / 2 + 0.5, z: p.y - N / 2 + 0.5, y: 0, dwell: false,
+    tx: Math.round(p.x), ty: Math.round(p.y), off: laneOffset(p.seg.k, 'bus'), sp: busSpeed(p.seg.k, p.seg),
+  }));
 }
 
 // recorrido cerrado (ida y vuelta) o {err}
@@ -153,18 +111,20 @@ export function computePoints(type, stops) {
   if (stops.length < 2) return { err: 'Una línea necesita al menos 2 paradas' };
   const fwd = [];
   if (type === 'bus') {
-    for (let i = 0; i < stops.length - 1; i++) {
-      const p = findPath(stops[i].x, stops[i].y, stops[i + 1].x, stops[i + 1].y);
-      if (!p) return { err: 'Las paradas no están conectadas por vías aptas para buses' };
-      p.forEach((pt, k) => {
-        if (i > 0 && k === 0) return;
-        fwd.push({ x: tw(pt[0]), z: tw(pt[1]), y: 0, dwell: false, tx: pt[0], ty: pt[1] });
-      });
+    // ida por las paradas en orden y vuelta en orden inverso (así se respetan los sentidos únicos)
+    const order = stops.concat(stops.slice(0, -1).reverse());
+    const loop = [];
+    for (let i = 0; i < order.length - 1; i++) {
+      const leg = busLeg(order[i], order[i + 1]);
+      if (!leg) return { err: 'Las paradas no están conectadas por vías aptas para buses (revisa los sentidos únicos)' };
+      leg[0].dwell = true;
+      if (i < stops.length - 1) fwd.push(...(i > 0 ? leg.slice(1) : leg));
+      loop.push(...(i > 0 ? leg.slice(1) : leg));
+      loop[loop.length - 1].dwell = true;
     }
-    const isStop = (p) => stops.some((s) => s.x === p.tx && s.y === p.ty);
-    fwd.forEach((p) => { p.dwell = isStop(p); });
-    const back = fwd.slice(1, -1).reverse().map((p) => ({ ...p, dwell: isStop(p) }));
-    return { fwd, loop: fwd.concat(back) };
+    // la última llegada coincide con la primera salida (el recorrido es cerrado)
+    if (loop.length > 1) loop.pop();
+    return { fwd, loop };
   }
   stops.forEach((s) => fwd.push({ x: tw(s.x), z: tw(s.y), y: stopBase(s), dwell: true, tx: s.x, ty: s.y }));
   for (let i = 0; i < fwd.length - 1; i++) {
@@ -190,7 +150,7 @@ function finishRoute(line, pts) {
     cum.push(cum[i] + Math.max(0.0001, Math.hypot(b.x - a.x, b.z - a.z)));
   }
   line.pts = loop; line.cum = cum; line.len = cum[n]; line.fwd = pts.fwd;
-  line.segSp = loop.map((p) => (line.type === 'bus' ? 1 / tileCost(p.tx, p.ty) : 1));
+  line.segSp = loop.map((p) => (line.type === 'bus' ? p.sp || 1 : 1));
   line.ok = true;
 }
 
@@ -419,7 +379,7 @@ function updateVehicle(line, v, dt) {
   const sl = line.cum[v.k + 1] - line.cum[v.k];
   const t = Math.min(1, Math.max(0, (v.s - line.cum[v.k]) / sl));
   const dx = (b.x - a.x) / sl, dz = (b.z - a.z) / sl;
-  const off = line.type === 'bus' ? 0.16 : 0.045;
+  const off = line.type === 'bus' ? (a.off ?? 0.16) : 0.045;
   const px = a.x + (b.x - a.x) * t - dz * off, pz = a.z + (b.z - a.z) * t + dx * off;
   const py = line.type === 'bus' ? heightAt(px, pz) + 0.035 : a.y + (b.y - a.y) * t + 0.02;
   v.mesh.position.set(px, py, pz);
@@ -434,9 +394,9 @@ function updateVehicle(line, v, dt) {
 // ---------- tráfico ambiente (sólo animación) ----------
 let carMesh = null;
 const cars = [];
-const MAXC = 110;
+const MAXC = 160;
 const carColors = ['#f7d117', '#f7d117', '#f7d117', '#d62828', '#2a6fdb', '#e8e8e8', '#2b2b2b', '#2a9d4a', '#f4a261', '#9aa0a6', '#e8e8e8'];
-const carOk = (x, y) => { const r = roadAt(x, y); return !!r && ROADS[r.k].car; };
+const carAllow = (k) => ROADS[k].car;
 
 function initCars() {
   carMesh = new THREE.InstancedMesh(buildCar('#ffffff'), mats.solid, MAXC);
@@ -447,27 +407,17 @@ function initCars() {
   grp.add(carMesh);
 }
 
-function roadTiles() {
-  const out = [];
-  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) if (carOk(x, y)) out.push(G.grid[y][x]);
-  return out;
-}
-
-function nextTile(c) {
-  const opts = DIRS.map(([dx, dy]) => [c.tx + dx, c.ty + dy]).filter(([x, y]) => carOk(x, y));
-  if (!opts.length) return null;
-  const fwd = opts.filter(([x, y]) => !(x === c.px && y === c.py));
-  const list = fwd.length ? fwd : opts;
-  return list[Math.floor(Math.random() * list.length)];
-}
-
+// cantidad de carros según el largo de la red vial
 export function ensureCars() {
-  const rt = roadTiles();
-  const want = Math.min(MAXC, Math.floor(rt.length / 2.4));
-  while (cars.length > want) cars.pop();
-  while (cars.length < want && rt.length) {
-    const t = rt[Math.floor(Math.random() * rt.length)];
-    cars.push({ tx: t.x, ty: t.y, px: -1, py: -1, nx: t.x, ny: t.y, t: 1, colorIdx: Math.floor(Math.random() * carColors.length), h: 0, speed: 1.4 + Math.random() * 0.8 });
+  let len = 0;
+  for (const seg of G.net.segs) if (carAllow(seg.k)) len += (seg.s1 - seg.s0) * ROADS[seg.k].w;
+  const want = Math.min(MAXC, Math.floor(len / 2.4));
+  cars.length = Math.min(cars.length, want);
+  for (const c of cars) if (!G.net.byId?.get(c.w.seg.id)) c.w = spawnWalker(G.net, carAllow) || c.w;
+  while (cars.length < want) {
+    const w = spawnWalker(G.net, carAllow);
+    if (!w) break;
+    cars.push({ w, colorIdx: Math.floor(Math.random() * carColors.length), h: 0, speed: 1.4 + Math.random() * 0.8 });
   }
   const col = new THREE.Color();
   cars.forEach((c, i) => { carMesh.setColorAt(i, col.set(carColors[c.colorIdx])); });
@@ -477,36 +427,23 @@ export function ensureCars() {
 
 const _m4 = new THREE.Matrix4(), _q4 = new THREE.Quaternion(), _p4 = new THREE.Vector3(), _s4 = new THREE.Vector3(1, 1, 1), _up = new THREE.Vector3(0, 1, 0);
 function updateCars(dt) {
-  let rt = null;
   for (let i = 0; i < cars.length; i++) {
     const c = cars[i];
-    if (!carOk(c.tx, c.ty)) {
-      rt = rt || roadTiles();
-      if (!rt.length) { cars.length = 0; carMesh.count = 0; return; }
-      const t = rt[Math.floor(Math.random() * rt.length)];
-      Object.assign(c, { tx: t.x, ty: t.y, px: -1, py: -1, nx: t.x, ny: t.y, t: 1 });
-    }
-    const r = roadAt(c.tx, c.ty);
-    c.t += c.speed * dt * (r ? Math.max(0.4, ROADS[r.k].speed) : 1);
-    while (c.t >= 1) {
-      c.t -= 1;
-      c.px = c.tx; c.py = c.ty;
-      c.tx = c.nx; c.ty = c.ny;
-      const nx = nextTile({ tx: c.tx, ty: c.ty, px: c.px, py: c.py });
-      if (!nx) { c.nx = c.tx; c.ny = c.ty; c.t = 0.5; break; }
-      c.nx = nx[0]; c.ny = nx[1];
-    }
-    const dx = c.nx - c.tx, dz = c.ny - c.ty;
-    const px = tw(c.tx) + dx * c.t, pz = tw(c.ty) + dz * c.t;
-    const lane = 0.2;
-    const ox = -dz * lane, oz = dx * lane;
-    const target = dx || dz ? Math.atan2(-dz, dx) : c.h;
-    let d = target - c.h;
-    while (d > Math.PI) d -= Math.PI * 2;
-    while (d < -Math.PI) d += Math.PI * 2;
-    c.h += d * Math.min(1, dt * 12);
+    const seg = c.w.seg;
+    stepWalker(G.net, c.w, c.speed * dt * Math.max(0.4, ROADS[seg.k].speed), carAllow);
+    const sg = c.w.seg;
+    const p = segPoint(sg, c.w.s);
+    const d = segDir(sg);
+    const dx = d.x * c.w.dir, dz = d.y * c.w.dir;
+    const off = laneOffset(sg.k, 'car', c.w.pick);
+    const wx = p.x - N / 2 + 0.5 - dz * off, wz = p.y - N / 2 + 0.5 + dx * off;
+    const target = Math.atan2(-dz, dx);
+    let a = target - c.h;
+    while (a > Math.PI) a -= Math.PI * 2;
+    while (a < -Math.PI) a += Math.PI * 2;
+    c.h += a * Math.min(1, dt * 12);
     _q4.setFromAxisAngle(_up, c.h);
-    _p4.set(px + ox, heightAt(px + ox, pz + oz) + 0.03, pz + oz);
+    _p4.set(wx, heightAt(wx, wz) + 0.03, wz);
     _m4.compose(_p4, _q4, _s4);
     carMesh.setMatrixAt(i, _m4);
   }

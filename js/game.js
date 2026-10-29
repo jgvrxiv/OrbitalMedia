@@ -104,7 +104,7 @@ export function attachWorld() {
 
 function rebuildRoads() {
   if (roadMesh) { S.root.remove(roadMesh); roadMesh.geometry.dispose(); }
-  roadMesh = new THREE.Mesh(buildRoadMesh(G.grid), mats.solid);
+  roadMesh = new THREE.Mesh(buildRoadMesh(G.grid, G.net), mats.solid);
   roadMesh.receiveShadow = true;
   roadMesh.castShadow = true;
   S.root.add(roadMesh);
@@ -361,6 +361,7 @@ export function roadTileCheck(p, k) {
 }
 
 export function buildRoad(plan, k) {
+  if (plan.diag) return buildDiag(plan, k);
   // agrupar el plan por posición a lo largo del eje: una posición sólo se construye si todos sus carriles caben
   const byPos = new Map();
   for (const p of plan) {
@@ -392,6 +393,35 @@ export function buildRoad(plan, k) {
   }
   flushRun();
   applyNet();
+  return true;
+}
+
+// Diagonal a 45°: se construyen los tramos continuos de pasos cuyas casillas (centro y unión) caben.
+function buildDiag(plan, k) {
+  const { line, dy, s0, s1 } = plan.diag;
+  const at = new Map(plan.map((p) => [p.s, p]));
+  const ok = new Map();
+  let cost = 0, changes = 0;
+  for (const p of plan) {
+    const c = roadTileCheck(p, k);
+    ok.set(p.s, c.ok);
+    if (c.ok && !c.same) { cost += c.cost; changes++; }
+  }
+  if (!changes) return false;
+  const runs = [];
+  let start = null;
+  for (let x = s0; x <= s1; x++) {
+    if (!ok.get(x)) { if (start !== null) runs.push([start, x - 1]); start = null; continue; }
+    if (start === null) start = x;
+    if (x < s1 && !ok.get(x + 0.5)) { runs.push([start, x]); start = null; }
+  }
+  if (start !== null) runs.push([start, s1]);
+  const real = runs.filter(([a, b]) => b > a);
+  if (!real.length) return false;
+  if (!spend(cost)) return false;
+  for (const [a, b] of real) addSegment(G.net, { k, ax: 3, dy, line, s0: a, s1: b, offs: [0], cIdx: -1 });
+  applyNet();
+  void at;
   return true;
 }
 

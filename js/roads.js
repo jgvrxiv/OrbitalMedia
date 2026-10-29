@@ -76,11 +76,32 @@ for (const R of Object.values(ROADS)) {
 
 const DIRS = [[0, -1], [1, 0], [0, 1], [-1, 0]];
 
-// Plan de trazado: línea recta sobre el eje dominante, con el ancho del tipo de vía.
+// ¿Este tipo de vía admite tramos diagonales? (fase 2: sólo las de una casilla de ancho)
+export const canDiag = (k) => ROADS[k].w === 1;
+
+// Plan de trazado. Recta sobre el eje dominante o, si el arrastre va cerca de 45° y la vía es de una
+// casilla, una diagonal. Devuelve las casillas; las diagonales llevan además plan.diag = { line, dy, s0, s1 }.
 export function roadPlan(a, b, k) {
   const R = ROADS[k];
   const dx = b.x - a.x, dy = b.y - a.y;
-  const ax = Math.abs(dx) >= Math.abs(dy) ? 0 : 1;
+  const adx = Math.abs(dx), ady = Math.abs(dy);
+  if (canDiag(k) && adx > 0 && ady > 0 && Math.min(adx, ady) / Math.max(adx, ady) >= 0.5) {
+    const n = Math.round((adx + ady) / 2);
+    const sx = Math.sign(dx), sy = Math.sign(dy);
+    const p0 = { x: a.x, y: a.y }, p1 = { x: a.x + sx * n, y: a.y + sy * n };
+    const [lo, hi] = p0.x <= p1.x ? [p0, p1] : [p1, p0];
+    const ddy = sx * sy; // al avanzar en X, cuánto cambia Y
+    const diag = { line: lo.x - ddy * lo.y, dy: ddy, s0: lo.x, s1: hi.x };
+    const out = [];
+    for (let x = lo.x; x <= hi.x; x++) {
+      const y = ddy * (x - diag.line);
+      out.push({ x, y, ax: 3, li: 0, s: x, part: 'c' });
+      if (x < hi.x) out.push({ x: x + 1, y, ax: 3, li: 0, s: x + 0.5, part: 'r' });
+    }
+    out.diag = diag;
+    return out;
+  }
+  const ax = adx >= ady ? 0 : 1;
   const offs = R.w === 1 ? [0] : R.w === 2 ? [0, 1] : [-1, 0, 1];
   const out = [];
   if (ax === 0) {
@@ -128,7 +149,7 @@ const COL = {
 const LIFT = { walk: 0.035, median: 0.04, sep: 0.05, bar: 0.08 };
 const YEL = '#f2c94c', WHITE = '#f4f4f0';
 
-export function buildRoadMesh(grid) {
+export function buildRoadMesh(grid, net) {
   const B = new Builder(11);
   B.litP = 0;
   const roadAt = (x, y) => (x >= 0 && y >= 0 && x < N && y < N ? grid[y][x].road : null);
@@ -158,6 +179,14 @@ export function buildRoadMesh(grid) {
             }
           });
         }
+        continue;
+      }
+
+      // ---- diagonales: la casilla de la escalera se rellena; la cinta se dibuja por segmento más abajo ----
+      if (t.ax === 3) {
+        if (t.k === 'tierra') flat(B, x0, z0, x1, z1, L - 0.012, COL.verge);
+        else if (t.k === 'peatonal') flat(B, x0, z0, x1, z1, L - 0.002, COL.paver, CELL.BRICK);
+        else flat(B, x0, z0, x1, z1, L - 0.012, COL.verge);
         continue;
       }
 
@@ -278,5 +307,71 @@ export function buildRoadMesh(grid) {
       void gl; void gr;
     }
   }
+  if (net) for (const seg of net.segs) if (seg.ax === 3) diagRibbon(B, seg, net);
   return B.build();
+}
+
+// Cinta continua a 45° con el perfil de la vía. Se recorta media casilla en los extremos que son cruces
+// para que el pavimento cuadrado del cruce no se superponga.
+function diagRibbon(B, seg, net) {
+  const R = ROADS[seg.k];
+  const W = R.meters;
+  const L = 0.03;
+  const node = (s) => net.nodes.get(s + ',' + seg.dy * (s - seg.line));
+  const trim0 = (node(seg.s0)?.segs.length || 0) > 1 ? 0.5 : 0;
+  const trim1 = (node(seg.s1)?.segs.length || 0) > 1 ? 0.5 : 0;
+  const sA = seg.s0 + trim0, sB = seg.s1 - trim1;
+  if (sB - sA < 0.05) return;
+  // dirección y normal en el plano (x, z) del mundo
+  const dl = Math.SQRT1_2;
+  const nx = -seg.dy * dl, nz = dl;
+  const P = (s, u) => {
+    const cx = s - N / 2 + 0.5, cz = seg.dy * (s - seg.line) - N / 2 + 0.5;
+    const o = (u - W / 2) / MPT;
+    return [cx + nx * o, cz + nz * o];
+  };
+  const step = 0.5;
+  const quad = (s0, s1, ua, ub, lift, color, raised = 0, top = null) => {
+    const [ax0, az0] = P(s0, ua), [bx0, bz0] = P(s1, ua), [bx1, bz1] = P(s1, ub), [ax1, az1] = P(s0, ub);
+    const y = (x, z, k) => H(x, z) + lift + k;
+    const r = raised;
+    B.quad([ax0, y(ax0, az0, r), az0], [bx0, y(bx0, bz0, r), bz0], [bx1, y(bx1, bz1, r), bz1], [ax1, y(ax1, az1, r), az1], top || color);
+    if (r) {
+      const sc = shade(color, 0.8);
+      B.quad([ax0, y(ax0, az0, 0), az0], [bx0, y(bx0, bz0, 0), bz0], [bx0, y(bx0, bz0, r), bz0], [ax0, y(ax0, az0, r), az0], sc);
+      B.quad([bx1, y(bx1, bz1, 0), bz1], [ax1, y(ax1, az1, 0), az1], [ax1, y(ax1, az1, r), az1], [bx1, y(bx1, bz1, r), bz1], sc);
+    }
+  };
+  for (let s = sA; s < sB - 1e-6; s += step) {
+    const s1 = Math.min(sB, s + step);
+    const idx = Math.round(s * 2);
+    for (const st of R.strips.map((x) => ({ ...x, u0: x.u0 - (R.w * MPT - W) / 2, u1: x.u1 - (R.w * MPT - W) / 2 }))) {
+      switch (st.t) {
+        case 'lane': quad(s, s1, st.u0, st.u1, L + 0.004, R.color); break;
+        case 'walk': quad(s, s1, st.u0, st.u1, L + 0.004, COL.walk, LIFT.walk); break;
+        case 'dirt': quad(s, s1, st.u0, st.u1, L, idx % 4 < 2 ? '#a08259' : '#967652'); break;
+        case 'paver': quad(s, s1, st.u0, st.u1, L + 0.004, idx % 2 ? '#d6c9ad' : '#c4b597'); break;
+        case 'verge': quad(s, s1, st.u0, st.u1, L, COL.verge); break;
+        default: quad(s, s1, st.u0, st.u1, L + 0.004, COL[st.t] || R.color, LIFT[st.t] || 0);
+      }
+    }
+    // demarcación entre carriles (guiones de 1/4 de paso)
+    const lanes = R.strips.map((x) => ({ ...x, u0: x.u0 - (R.w * MPT - W) / 2, u1: x.u1 - (R.w * MPT - W) / 2 }));
+    for (let i = 0; i < lanes.length - 1; i++) {
+      const a = lanes[i], b = lanes[i + 1];
+      if (a.t !== 'lane' || b.t !== 'lane') continue;
+      const col = a.d === b.d ? WHITE : YEL;
+      const w = 0.25;
+      if (idx % 2 === 0) quad(s + 0.05, s + 0.3, a.u1 - w, a.u1 + w, L + 0.008, col);
+    }
+    if (seg.k === 'tierra') for (const o of [0.3, 0.7]) quad(s, s1, W * o - 0.4, W * o + 0.4, L + 0.002, '#7d6342');
+    // faroles en los andenes cada dos pasos
+    if (idx % 4 === 0) {
+      for (const st of lanes) {
+        if (st.t !== 'walk') continue;
+        const [px, pz] = P(s + 0.25, (st.u0 + st.u1) / 2);
+        lampPost(B, px, pz, L + 0.04);
+      }
+    }
+  }
 }

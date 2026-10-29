@@ -28,7 +28,8 @@ Luego visita http://localhost:8000. El botón **🏙️ Ejemplo** genera una ciu
   destapado, peatonal, calle de 2 carriles, calle de un sentido, calle de 3 carriles, avenida de 4 carriles
   con separador, avenida de 6 carriles, bulevar con ciclorruta, troncal de buses y autopista. Cada vía
   reserva casillas enteras de 12 m; la sobra se dibuja como zona verde. El perfil transversal siempre es
-  horizontal: en ladera el terreno se nivela bajo la vía y sólo sube a lo largo de ella
+  horizontal: en ladera el terreno se nivela bajo la vía y sólo sube a lo largo de ella. Las vías de
+  12 m pueden trazarse en **diagonal a 45°** (arrastrando cerca de esa inclinación)
   (sin acceso a lotes). La vía define qué densidad puede crecer al frente y cuánta pendiente admite.
 - **Industria**: talleres, cultivos de flores, ladrilleras, bodegas, fábricas textiles, agroindustria,
   plantas y centros logísticos. Produce bienes para el comercio (si faltan se importan, si sobran se
@@ -60,7 +61,8 @@ Enter = terminar línea.
 | `js/models_res.js`, `models_com.js`, `models_ind.js` | Tipologías residenciales, comerciales e industriales. |
 | `js/buildings.js` | Servicios públicos y modelos de transporte. |
 | `js/roads.js` | Tipos de vía y malla de vías sobre el relieve. |
-| `js/roadnet.js` | Red vial como grafo (segmentos y nodos) proyectada sobre la cuadrícula. |
+| `js/roadnet.js` | Red vial como grafo (segmentos ortogonales y diagonales, nodos) proyectada sobre la cuadrícula. |
+| `js/netpath.js` | Rutas de bus y caminatas de carros sobre el grafo. |
 | `js/scene.js` | Escena, relieve, cielo día/noche, cámara y selección. |
 | `js/game.js` | Estado, construcción y simulación (valor del suelo, demanda, economía). |
 | `js/transit.js` | Paradas, líneas, vehículos y tráfico ambiente. |

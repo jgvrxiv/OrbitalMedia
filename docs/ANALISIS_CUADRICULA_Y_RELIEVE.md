@@ -74,8 +74,22 @@ vías, buses y carros) sigue leyendo casillas y se ve igual que antes.
 - Las partidas guardan el grafo (formato v3); las partidas v2, que guardaban casillas, se convierten al
   cargar.
 
-Pendiente para la fase 2: que las rutas de bus y el tráfico recorran el grafo en vez de las casillas
-(hoy es equivalente porque los segmentos son ortogonales) y admitir segmentos a 45°.
+## 2c. Fase 2 implementada: diagonales a 45° y recorridos sobre el grafo
+
+- Un segmento puede ser **diagonal** (`ax = 3`, con `dy = ±1`). Se proyecta sobre la cuadrícula como una
+  **escalera**: la casilla central de cada paso más una casilla de unión, para que lotes, acceso y valor del
+  suelo sigan funcionando en 4 direcciones. La vía se dibuja como una **cinta continua a 45°** con su
+  perfil; los triángulos sobrantes de la escalera quedan como zona verde.
+- Se detectan cruces diagonal–fila, diagonal–columna y diagonal–diagonal (cuando comparten casilla).
+- Por ahora sólo las vías de una casilla (12 m) pueden ir en diagonal; las anchas siguen ortogonales.
+- **Rutas de bus** (`js/netpath.js`): Dijkstra entre nodos del grafo, con costo según largo (√2 por paso
+  diagonal) y velocidad del tipo de vía. La ida y la vuelta se calculan por separado para respetar los
+  sentidos únicos. Cada bus va por el carril que le corresponde según el perfil (exterior, o el carril
+  exclusivo en la troncal).
+- **Carros ambiente**: recorren segmentos en vez de casillas, eligen al azar en cada nodo y respetan los
+  sentidos únicos.
+- Pendiente: diagonales de vías anchas, edificios girados 45° frente a las diagonales y cruces con forma
+  propia (hoy el cruce es una casilla cuadrada de pavimento).
 
 ## 3. Relieve: qué se implementó
 
