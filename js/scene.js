@@ -2,11 +2,13 @@
 // cordillera, árboles decorativos, capas de casillas sobre el terreno y selección por rayo.
 import * as THREE from '../vendor/three.module.min.js';
 import { Builder, rng, mats } from './geom.js';
+import { GRID_N } from './units.js';
 
-export const N = 64;
+export const N = GRID_N;
+const K = N / 64; // el relieve se diseñó para 64 casillas; se escala al tamaño del mapa
 export const tw = (i) => i - N / 2 + 0.5; // centro de casilla -> mundo
 export const wt = (v) => Math.floor(v + N / 2); // mundo -> casilla
-const M = 34; // margen de terreno fuera de la ciudad
+const M = 40; // margen de terreno fuera de la ciudad
 
 export const S = {
   renderer: null, scene: null, camera: null, canvas: null, sun: null, hemi: null,
@@ -38,6 +40,10 @@ const sstep = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a)
 
 // Altura analítica del terreno en coordenadas de mundo.
 export function terrainFn(x, z) {
+  x /= K; z /= K;
+  return terrainBase(x, z) * (S.terrain === 'llano' ? 1 : 1.5);
+}
+function terrainBase(x, z) {
   if (S.terrain === 'llano') {
     return fbm(x * 0.05, z * 0.05) * 0.5 + 3 * sstep(34, 60, Math.max(Math.abs(x), Math.abs(z)));
   }
@@ -185,7 +191,7 @@ const SKY = {
   night: { top: new THREE.Color('#050a1c'), hor: new THREE.Color('#1b2a4a'), fog: new THREE.Color('#121c33') },
 };
 function makeSky() {
-  const g = new THREE.SphereGeometry(450, 24, 12);
+  const g = new THREE.SphereGeometry(900, 24, 12);
   g.setAttribute('color', new THREE.Float32BufferAttribute(new Float32Array(g.attributes.position.count * 3), 3));
   const m = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide, fog: false, depthWrite: false }));
   m.renderOrder = -10;
@@ -195,7 +201,7 @@ function paintSky(top, hor) {
   const g = S.sky.geometry, p = g.attributes.position, c = g.attributes.color;
   const t = new THREE.Color();
   for (let i = 0; i < p.count; i++) {
-    const y = p.getY(i) / 450;
+    const y = p.getY(i) / 900;
     t.copy(hor).lerp(top, Math.min(1, Math.max(0, y * 2.2)));
     if (y < 0) t.copy(hor);
     c.setXYZ(i, t.r, t.g, t.b);
@@ -213,21 +219,21 @@ export function initScene(canvas) {
   S.renderer = renderer;
 
   const scene = new THREE.Scene();
-  scene.fog = new THREE.Fog('#d2e7f2', 110, 330);
+  scene.fog = new THREE.Fog('#d2e7f2', 160, 560);
   S.scene = scene;
   scene.add(S.root);
   S.sky = makeSky();
   scene.add(S.sky);
 
-  S.camera = new THREE.PerspectiveCamera(45, 1, 0.5, 900);
+  S.camera = new THREE.PerspectiveCamera(45, 1, 0.5, 1600);
 
   S.hemi = new THREE.HemisphereLight('#ffffff', '#8aa070', 1.0);
   scene.add(S.hemi);
   const sun = new THREE.DirectionalLight('#fff4dd', 2.1);
   sun.castShadow = true;
-  sun.shadow.mapSize.set(2048, 2048);
+  sun.shadow.mapSize.set(4096, 4096);
   const sc = sun.shadow.camera;
-  sc.left = -50; sc.right = 50; sc.top = 50; sc.bottom = -50; sc.near = 5; sc.far = 220;
+  sc.left = -N * 0.78; sc.right = N * 0.78; sc.top = N * 0.78; sc.bottom = -N * 0.78; sc.near = 5; sc.far = 400;
   sun.shadow.bias = -0.0006;
   sun.shadow.normalBias = 0.03;
   scene.add(sun);
@@ -246,7 +252,7 @@ export function initScene(canvas) {
 
   // planicie lejana: cuatro franjas alrededor del terreno (sin cubrir el valle)
   const far = new THREE.Group();
-  const E = N / 2 + M, F2 = 900;
+  const E = N / 2 + M, F2 = 1500;
   const fm = new THREE.MeshLambertMaterial({ color: '#5f8f4c' });
   for (const [x0, z0, x1, z1] of [[-F2, -F2, F2, -E], [-F2, E, F2, F2], [-F2, -E, -E, E], [E, -E, F2, E]]) {
     const p = new THREE.Mesh(new THREE.PlaneGeometry(x1 - x0, z1 - z0), fm);
@@ -268,13 +274,13 @@ export function initScene(canvas) {
   S.mountains = [];
   for (let i = 0; i < 40; i++) {
     const a = (i / 40) * Math.PI * 2 + r() * 0.1;
-    const d = 78 + r() * 40;
+    const d = N / 2 + M + 8 + r() * 40;
     const m = mountain(r, Math.cos(a) * d, Math.sin(a) * d);
     S.mountains.push(m); scene.add(m);
   }
   for (let i = 0; i < 22; i++) {
     const a = (i / 22) * Math.PI * 2 + r() * 0.2;
-    const d = 150 + r() * 60;
+    const d = N / 2 + M + 80 + r() * 60;
     const m = mountain(r, Math.cos(a) * d, Math.sin(a) * d);
     m.scale.setScalar(1.9);
     S.mountains.push(m); scene.add(m);
@@ -309,7 +315,7 @@ export function setTime(t) {
   const dusk = Math.max(0, 1 - Math.abs(el) / 0.3) * (el > -0.25 ? 1 : 0);
   S.night = 1 - day;
   // posición del sol (oriente -> occidente) o de la luna
-  const sx = Math.cos(ang) * 60, sy = Math.max(12, Math.abs(el) * 70 + 12), sz = 25;
+  const sx = Math.cos(ang) * 120, sy = Math.max(24, Math.abs(el) * 140 + 24), sz = 50;
   S.sun.position.set(S.cam.x + sx, sy, S.cam.z + sz);
   S.sun.target.position.set(S.cam.x, 0, S.cam.z);
   S.sun.intensity = 0.25 + 1.95 * day;
@@ -328,7 +334,7 @@ export function setTime(t) {
 // ---------------- cámara ----------------
 export function updateCamera() {
   const c = S.cam;
-  c.dist = Math.min(110, Math.max(6, c.dist));
+  c.dist = Math.min(220, Math.max(6, c.dist));
   c.pitch = Math.min(1.4, Math.max(0.3, c.pitch));
   const lim = N / 2 + 6;
   c.x = Math.max(-lim, Math.min(lim, c.x));
@@ -449,7 +455,7 @@ export const Trees = {
     }
     // bosque fuera de la ciudad
     const out = [];
-    for (let i = 0; i < 900; i++) {
+    for (let i = 0; i < 2200; i++) {
       const x = r.range(-N / 2 - M + 2, N / 2 + M - 2), z = r.range(-N / 2 - M + 2, N / 2 + M - 2);
       if (Math.abs(x) < N / 2 + 0.5 && Math.abs(z) < N / 2 + 0.5) continue;
       const type = r() < 0.5 ? 3 : r() < 0.6 ? 0 : 2;

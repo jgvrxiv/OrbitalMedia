@@ -1,8 +1,9 @@
 // Piezas reutilizables para los modelos: paletas por estrato, lotes, cercas, tanques, balcones, toldos…
 // Convención: el lote ocupa [-0.5, 0.5] en X y Z; la fachada principal mira a +Z (hacia la vía).
+import { m2u, FLOOR_M } from './units.js';
 import { CELL, shade } from './geom.js';
 
-export const F = 0.26; // altura de piso residencial
+export const F = m2u(FLOOR_M); // altura de piso residencial (3,1 m)
 
 export const PAL = {
   // muros pintados / acabados por estrato

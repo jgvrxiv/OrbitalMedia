@@ -12,6 +12,7 @@ import { PUBLIC, SERVICES, buildPublic } from './buildings.js';
 import { tierOf } from './models_com.js';
 import { IND_TYPES } from './models_ind.js';
 import * as TR from './transit.js';
+import { u2m } from './units.js';
 
 const $ = (s, r = document) => r.querySelector(s);
 export const UI = { tool: { type: 'inspect' }, hover: null, drag: null, selection: null, lineStops: [], tab: 'city' };
@@ -24,7 +25,7 @@ const SECTIONS = [
     { icon: '🚧', name: 'Demoler', sub: 'Arrastra para borrar', tool: { type: 'bulldoze' }, key: 'b' },
   ] },
   { title: 'Vías', items: ROAD_ORDER.map((k, i) => ({
-    icon: ROADS[k].icon, name: ROADS[k].name, sub: `${ROADS[k].w} casilla${ROADS[k].w > 1 ? 's' : ''} · ${ROADS[k].desc}`,
+    icon: ROADS[k].icon, name: ROADS[k].name, sub: `${u2m(ROADS[k].w)} m de ancho · ${ROADS[k].desc}`,
     price: fmt(ROADS[k].cost) + '/u', tool: { type: 'road', k }, key: i === 2 ? 'r' : undefined,
   })) },
   { title: 'Zonas', items: Object.entries(ZONES).map(([z, Z]) => ({
@@ -126,7 +127,7 @@ export function setTool(t) {
   const msg = {
     inspect: 'Clic en un edificio, lote o parada para ver sus datos · arrastra para mover el mapa',
     bulldoze: 'Arrastra un rectángulo para demoler vías, zonas, edificios o paradas',
-    road: () => `${ROADS[t.k].name}: arrastra para trazar en línea recta (${ROADS[t.k].w} casilla${ROADS[t.k].w > 1 ? 's' : ''} de ancho)`,
+    road: () => `${ROADS[t.k].name}: arrastra para trazar en línea recta (${u2m(ROADS[t.k].w)} m de ancho)`,
     zone: () => `Arrastra un rectángulo: ${ZONES[t.z].name}. El estrato lo define el valor del suelo.`,
     pub: () => `${PUBLIC[t.key].name}: debe quedar junto a una vía · ${PUBLIC[t.key].desc}`,
     stop: () => (t.st === 'bus' ? 'Haz clic en una calle, avenida o troncal para poner un paradero' : 'Haz clic en un lote libre para poner una estación de Metrocable'),
@@ -210,7 +211,7 @@ function updatePreview() {
       return { x: p.x, y: p.y, ok: c.ok, why: c.why };
     });
     setPreview(prev);
-    if (UI.drag) info.textContent = `${ROADS[T0.k].name}: ${plan.length / ROADS[T0.k].w} de largo · costo ${fmt(cost)}` + (bad ? ` · ${bad} casillas bloqueadas (edificios o pendiente)` : '');
+    if (UI.drag) info.textContent = `${ROADS[T0.k].name}: ${u2m(plan.length / ROADS[T0.k].w)} m de largo · costo ${fmt(cost)}` + (bad ? ` · ${bad} casillas bloqueadas (edificios o pendiente)` : '');
   } else if (T0.type === 'zone') {
     const tiles = UI.drag ? rectTiles(UI.drag.start, h) : [{ x: h.x, y: h.y }];
     const prev = tiles.map((p) => ({ ...p, ok: zoneOk(p.x, p.y, T0.z), color: zoneOk(p.x, p.y, T0.z) ? ZONES[T0.z].color : null }));
@@ -381,7 +382,7 @@ function updateTip(e) {
   } else if (T0.type === 'zone' || T0.type === 'inspect') {
     html = `Lote libre · valor del suelo → <span class="estr" style="background:${ESTRATO_COLORS[cov.e - 1]}">Estrato ${cov.e}</span>`;
     const a = G.access[idx(h.x, h.y)];
-    html += `<br>${a ? `Acceso a vía: hasta densidad ${DENS_NAME[a].toLowerCase()}` : '<span class="neg">Sin vía cercana</span>'} · pendiente ${padOf(h.x, h.y).slope.toFixed(2)}`;
+    html += `<br>${a ? `Acceso a vía: hasta densidad ${DENS_NAME[a].toLowerCase()}` : '<span class="neg">Sin vía cercana</span>'} · pendiente ${Math.round(padOf(h.x, h.y).slope * 100)}%`;
   } else { tip.hidden = true; return; }
   tip.innerHTML = html;
   tip.hidden = false;
@@ -489,7 +490,7 @@ export function renderInfo() {
       const d = PUBLIC[b.key];
       html = `<h3>${d.icon} ${d.name}</h3><p class="hint">${d.desc}</p>
         <div class="kv"><span>Servicio</span><b>${SERVICES[d.cat].name}</b></div>
-        <div class="kv"><span>Radio</span><b>${d.radius} casillas</b></div>
+        <div class="kv"><span>Radio</span><b>${d.radius} casillas (${u2m(d.radius)} m)</b></div>
         <div class="kv"><span>Empleos</span><b>${d.jobs}</b></div>
         <div class="kv"><span>Mantenimiento</span><b>${fmt(d.upkeep * 10)}/mes</b></div>`;
     } else if (b.kind === 'com') {
@@ -524,7 +525,7 @@ export function renderInfo() {
     html = `<h3>Lote ${sel.x},${sel.y}</h3>
       <div class="kv"><span>Uso</span><b>${t.road ? ROADS[t.road.k].name : t.zone ? ZONES[t.zone].name : 'Libre'}</b></div>
       <div class="kv"><span>Acceso</span><b>${a ? 'densidad ' + DENS_NAME[a].toLowerCase() : 'sin vía'}</b></div>
-      <div class="kv"><span>Pendiente</span><b>${padOf(sel.x, sel.y).slope.toFixed(2)}</b></div>` +
+      <div class="kv"><span>Pendiente</span><b>${Math.round(padOf(sel.x, sel.y).slope * 100)}%</b></div>` +
       (t.zone && zoneProblem(sel.x, sel.y) ? `<p class="neg">${zoneProblem(sel.x, sel.y)}</p>` : '') + lvBlock(sel.x, sel.y);
   }
   el.innerHTML = html;

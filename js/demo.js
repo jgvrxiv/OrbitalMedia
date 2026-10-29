@@ -19,12 +19,14 @@ function spiral(tx, ty, fn, R = 10) {
   }
   return null;
 }
-const place = (key, tx, ty) => spiral(tx, ty, (x, y) => canPlacePublic(key, x, y).ok && placePublic(key, x, y));
-const stopNear = (type, tx, ty, R = 6) => spiral(tx, ty, (x, y) => TR.stopOk(type, x, y) && TR.addStop(type, x, y), R);
+// la ciudad de ejemplo se diseñó en 64 × 64 casillas; se centra en el mapa
+const O = Math.floor((N - 64) / 2);
+const place = (key, tx, ty) => spiral(tx + O, ty + O, (x, y) => canPlacePublic(key, x, y).ok && placePublic(key, x, y));
+const stopNear = (type, tx, ty, R = 6) => spiral(tx + O, ty + O, (x, y) => TR.stopOk(type, x, y) && TR.addStop(type, x, y), R);
 
 export function buildDemo() {
   G.money = 1e12;
-  const R = (k, ax, ay, bx, by) => buildRoad(roadPlan({ x: ax, y: ay }, { x: bx, y: by }, k), k);
+  const R = (k, ax, ay, bx, by) => buildRoad(roadPlan({ x: ax + O, y: ay + O }, { x: bx + O, y: by + O }, k), k);
   // fondo del valle
   R('troncal', 34, 3, 34, 60);
   R('autopista', 26, 1, 26, 62);
@@ -52,9 +54,9 @@ export function buildDemo() {
   pubs.forEach(([k, x, y]) => place(k, x, y));
 
   // zonas
-  for (let y = 1; y < N - 1; y++) {
-    for (let x = 1; x < N - 1; x++) {
-      const t = tile(x, y);
+  for (let y = 1; y < 63; y++) {
+    for (let x = 1; x < 63; x++) {
+      const t = tile(x + O, y + O);
       if (t.road || t.bld || t.stop) continue;
       let z = 0;
       if (y <= 12 && x >= 22 && x <= 33) z = y < 7 ? 9 : 8; // industria al norte, junto a la autopista
@@ -64,7 +66,7 @@ export function buildDemo() {
       else if (x > 44) z = (y === 31 || y === 29) ? 5 : (x + y) % 13 === 0 ? 4 : 1;
       else if (y > 48) z = (x + y) % 7 === 0 ? 7 : 1;
       else z = 1;
-      if (z) paintZone([{ x, y }], z);
+      if (z) paintZone([{ x: x + O, y: y + O }], z);
     }
   }
   // bajar la densidad donde la vía o la pendiente no la permiten; quitar lo que no podría crecer

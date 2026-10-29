@@ -4,7 +4,7 @@ Para los Proyectos de Orbital en Claude Code.
 
 ## 🇨🇴 Ciudad Tricolor — city builder 3D colombiano
 
-City builder en 3D (Three.js, sin build step) con temática colombiana.
+City builder en 3D (Three.js, sin build step) con temática colombiana. Escala: 1 casilla = 12 m; el mapa tiene 128 × 128 casillas (≈ 1,5 km).
 
 **Jugar:** sirve la carpeta con cualquier servidor estático y abre `index.html`:
 
@@ -25,7 +25,7 @@ Luego visita http://localhost:8000. El botón **🏙️ Ejemplo** genera una ciu
   existen en varios estratos; el estrato define acabados (ladrillo a la vista y zinc, rejas, pintura,
   balcones, vidrio, piscinas…).
 - **6 tipos de vía** con ancho y usos distintos: camino destapado, calle peatonal, calle, avenida
-  (2 casillas con separador y palmas), troncal de buses (3 casillas con carril exclusivo) y autopista
+  (24 m con separador y palmas), troncal de buses (36 m con carril exclusivo) y autopista
   (sin acceso a lotes). La vía define qué densidad puede crecer al frente y cuánta pendiente admite.
 - **Industria**: talleres, cultivos de flores, ladrilleras, bodegas, fábricas textiles, agroindustria,
   plantas y centros logísticos. Produce bienes para el comercio (si faltan se importan, si sobran se

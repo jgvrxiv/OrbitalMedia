@@ -1,6 +1,6 @@
 import * as THREE from '../vendor/three.module.min.js';
 import { initMaterials } from './geom.js';
-import { initScene, S, updateCamera, resize, genTerrain, setTime, Trees, heightAt } from './scene.js';
+import { N, initScene, S, updateCamera, resize, genTerrain, setTime, Trees, heightAt } from './scene.js';
 import {
   G, attachWorld, update as updateGame, serialize, load as loadGame, clearAll as clearGame, flush, COST, markDirty, renderStats,
 } from './game.js';
@@ -85,7 +85,7 @@ function newCity(kind = 'valle', seed = 7) {
   markDirty('all');
   flush();
   TR.recomputeAll();
-  S.cam.x = 0; S.cam.z = 0; S.cam.dist = 46;
+  S.cam.x = 0; S.cam.z = 0; S.cam.dist = 70;
   refresh();
 }
 function demo() {
@@ -140,7 +140,7 @@ window.addEventListener('resize', resize);
 
 const _v = new THREE.Vector3();
 const proj = (x, y) => {
-  _v.set(x - 32 + 0.5, 0, y - 32 + 0.5);
+  _v.set(x - N / 2 + 0.5, 0, y - N / 2 + 0.5);
   _v.y = heightAt(_v.x, _v.z);
   _v.project(S.camera);
   const r = S.canvas.getBoundingClientRect();

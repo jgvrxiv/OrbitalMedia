@@ -18,11 +18,11 @@ export const ROADS = {
   },
   avenida: {
     name: 'Avenida', icon: '🌴', w: 2, cost: 15000, upkeep: 6, dens: 3, car: true, bus: true, truck: true, speed: 1.5,
-    lv: 0.03, rank: 3, maxSlope: 0.9, color: '#383c42', desc: '2 casillas con separador y palmas. Permite alta densidad.',
+    lv: 0.03, rank: 3, maxSlope: 0.9, color: '#383c42', desc: 'Separador con palmas. Permite alta densidad.',
   },
   troncal: {
     name: 'Troncal de buses', icon: '🚍', w: 3, cost: 19000, upkeep: 8, dens: 3, car: true, bus: true, truck: true, speed: 1.5, busSpeed: 2.2,
-    lv: 0.02, rank: 4, maxSlope: 0.8, color: '#3a3e44', desc: '3 casillas con carril exclusivo central (tipo BRT). Buses más rápidos.',
+    lv: 0.02, rank: 4, maxSlope: 0.8, color: '#3a3e44', desc: 'Carril exclusivo central (tipo BRT). Buses más rápidos.',
   },
   autopista: {
     name: 'Autopista', icon: '🛤️', w: 2, cost: 24000, upkeep: 10, dens: 0, car: true, bus: true, truck: true, speed: 2.4,
