@@ -205,14 +205,9 @@ function recomputeAccess() {
     G.face[i] = p.face;
     if (p.diag) G.parcels.set(i, p);
   }
-  // la cuadrícula visible se alinea con la vía: en la franja de una diagonal sólo se ven sus lotes girados
+  // cuadrícula visible: sólo lotes con frente a una vía; en la franja de una diagonal, sus lotes girados
   const mask = new Uint8Array(N * N);
-  for (let i = 0; i < N * N; i++) {
-    if (!pr.region[i]) continue;
-    const p = pr.parcels.get(i);
-    if (!p || p.diag) mask[i] = 1;
-  }
-  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) { const r = G.grid[y][x].road; if (r && r.ax === 3) mask[idx(x, y)] = 1; }
+  for (const [i, p] of pr.parcels) if (!p.diag) mask[i] = 1;
   setGridMask(mask, [...G.parcels.values()]);
 }
 
@@ -484,7 +479,7 @@ export function zoneProblem(x, y, ignoreDemand = false) {
   const Z = ZONES[t.zone];
   const a = G.access[idx(x, y)];
   if (!a) return 'Sin vía cercana';
-  if (a < Z.d) return Z.d === 3 ? 'Alta densidad requiere avenida o troncal al frente' : 'Densidad media requiere una calle (no destapada) al frente';
+  if (a < Z.d) return a === 1 ? 'Sobre camino destapado sólo crecen casas: pavimenta la vía' : 'Lote de fondo (sin frente a la vía): sólo crecen casas';
   const s = padOf(x, y).slope;
   if (s > MAX_SLOPE[Z.d] + (Z.k === 'r' && Z.d === 1 ? 0.1 : 0)) return 'Terreno muy inclinado para esta densidad';
   if (!ignoreDemand && G.dem[Z.k] < -0.2) return 'Poca demanda de ' + ({ r: 'vivienda', c: 'comercio', o: 'oficinas', i: 'industria' }[Z.k]);

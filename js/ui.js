@@ -67,7 +67,7 @@ const CATEGORIES = [
 ];
 const ALL_ITEMS = CATEGORIES.flatMap((c) => c.groups.flatMap((g) => g.items));
 function zoneSub(Z) {
-  if (Z.k === 'r') return ['', 'Casas', 'Edificios de 3-6 pisos', 'Torres (requiere avenida)'][Z.d];
+  if (Z.k === 'r') return ['', 'Casas', 'Edificios de 3-6 pisos', 'Torres de 10 o más pisos'][Z.d];
   if (Z.k === 'c') return ['', 'Tiendas y locales', 'Locales y plazoletas', 'Centros comerciales y hoteles'][Z.d];
   if (Z.k === 'o') return ['', 'Casas de oficinas', 'Edificios de oficinas', 'Torres empresariales'][Z.d];
   return ['', 'Talleres, flores, ladrilleras', 'Bodegas y fábricas', 'Plantas y logística'][Z.d];

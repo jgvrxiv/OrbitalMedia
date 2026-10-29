@@ -156,24 +156,23 @@ function rebuildTerrainMesh() {
   if (S.far) S.far.position.y = lo - 0.4;
 }
 
-// Máscara de la cuadrícula: casillas donde no se dibujan las líneas fijas (vías diagonales y sus lotes)
-// y lotes girados que se dibujan en su lugar. La define game.js al recalcular los lotes.
-let gridMask = null, gridQuads = [];
-export function setGridMask(mask, quads) {
-  gridMask = mask; gridQuads = quads || [];
+// Cuadrícula visible: sólo los lotes con frente a una vía. show[i] = 1 dibuja la casilla i; los lotes girados
+// de las diagonales se dibujan aparte. La define game.js al recalcular los lotes.
+let gridShow = null, gridQuads = [];
+export function setGridMask(show, quads) {
+  gridShow = show; gridQuads = quads || [];
   if (S.grid) rebuildGridLines();
 }
 
 function rebuildGridLines() {
   const pts = [];
-  const masked = (i, j) => gridMask && i >= 0 && j >= 0 && i < N && j < N && gridMask[j * N + i];
-  // aristas horizontales (entre la casilla de arriba j-1 y la de abajo j) y verticales
+  const on = (i, j) => gridShow && i >= 0 && j >= 0 && i < N && j < N && gridShow[j * N + i];
   for (let j = 0; j <= N; j++) for (let i = 0; i < N; i++) {
-    if (masked(i, j - 1) || masked(i, j)) continue;
+    if (!on(i, j - 1) && !on(i, j)) continue;
     pts.push(i - N / 2, hC(i, j) + 0.04, j - N / 2, i + 1 - N / 2, hC(i + 1, j) + 0.04, j - N / 2);
   }
   for (let i = 0; i <= N; i++) for (let j = 0; j < N; j++) {
-    if (masked(i - 1, j) || masked(i, j)) continue;
+    if (!on(i - 1, j) && !on(i, j)) continue;
     pts.push(i - N / 2, hC(i, j) + 0.04, j - N / 2, i - N / 2, hC(i, j + 1) + 0.04, j + 1 - N / 2);
   }
   // lotes girados

@@ -31,7 +31,7 @@ Luego visita http://localhost:8000. El botón **🏙️ Ejemplo** genera una ciu
   horizontal: en ladera el terreno se nivela bajo la vía y sólo sube a lo largo de ella. Todas las vías
   pueden trazarse en **diagonal a 45°** (arrastrando cerca de esa inclinación) y los edificios de frente
   a una diagonal se giran para mirarla
-  (sin acceso a lotes). La vía define qué densidad puede crecer al frente y cuánta pendiente admite.
+  (sin acceso a lotes). Cualquier calle pavimentada admite alta densidad; el camino destapado sólo casas. La vía define cuánta pendiente admite.
 - **Industria**: talleres, cultivos de flores, ladrilleras, bodegas, fábricas textiles, agroindustria,
   plantas y centros logísticos. Produce bienes para el comercio (si faltan se importan, si sobran se
   exportan), da empleo y contamina (baja el valor del suelo alrededor).

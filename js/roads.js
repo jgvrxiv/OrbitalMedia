@@ -10,7 +10,8 @@ import { METERS_PER_TILE as MPT } from './units.js';
 //  bar barrera (autopista) · verge zona verde · bike ciclorruta · shoulder berma · dirt destapado · paver adoquín
 const P = (t, w, d = 0) => ({ t, w, d });
 
-// dens: densidad máxima que permite en sus frentes (0 = sin acceso a lotes)
+// dens: densidad máxima que permite en sus frentes (0 = sin acceso a lotes). Cualquier calle pavimentada
+// admite edificios altos; el camino destapado sólo casas.
 export const ROADS = {
   tierra: {
     name: 'Camino destapado', icon: '🟫', cost: 2500, upkeep: 1, dens: 1, car: true, bus: false, truck: true, speed: 0.6,
@@ -18,23 +19,23 @@ export const ROADS = {
     profile: [P('verge', 1.5), P('dirt', 9), P('verge', 1.5)],
   },
   peatonal: {
-    name: 'Calle peatonal', icon: '🚶', cost: 9000, upkeep: 3, dens: 2, car: false, bus: false, truck: false, speed: 0,
+    name: 'Calle peatonal', icon: '🚶', cost: 9000, upkeep: 3, dens: 3, car: false, bus: false, truck: false, speed: 0,
     lv: 0.06, rank: 1, maxSlope: 0.4, color: '#cdbfa3', desc: 'Sin carros; con escaleras sube pendientes de hasta 40 %. Sube el valor del suelo.',
     profile: [P('paver', 12)],
   },
   calle: {
-    name: 'Calle', icon: '🛣️', cost: 8000, upkeep: 3, dens: 2, car: true, bus: true, truck: true, speed: 1,
-    lv: 0, rank: 2, maxSlope: 0.2, color: '#3d4147', desc: '2 carriles en doble sentido. Hasta densidad media.',
+    name: 'Calle', icon: '🛣️', cost: 8000, upkeep: 3, dens: 3, car: true, bus: true, truck: true, speed: 1,
+    lv: 0, rank: 2, maxSlope: 0.2, color: '#3d4147', desc: '2 carriles en doble sentido.',
     profile: [P('walk', 2.5), P('lane', 3.5, -1), P('lane', 3.5, 1), P('walk', 2.5)],
   },
   calle1: {
-    name: 'Calle de un sentido', icon: '➡️', cost: 8500, upkeep: 3, dens: 2, car: true, bus: true, truck: true, speed: 1.15,
-    lv: 0, rank: 2.1, maxSlope: 0.2, color: '#3d4147', desc: '2 carriles en un solo sentido. Hasta densidad media.',
+    name: 'Calle de un sentido', icon: '➡️', cost: 8500, upkeep: 3, dens: 3, car: true, bus: true, truck: true, speed: 1.15,
+    lv: 0, rank: 2.1, maxSlope: 0.2, color: '#3d4147', desc: '2 carriles en un solo sentido.',
     profile: [P('walk', 2.5), P('lane', 3.5, 1), P('lane', 3.5, 1), P('walk', 2.5)],
   },
   calle3: {
-    name: 'Calle de 3 carriles', icon: '🚗', cost: 10000, upkeep: 4, dens: 2, car: true, bus: true, truck: true, speed: 1.25,
-    lv: -0.01, rank: 2.5, maxSlope: 0.18, color: '#3b3f45', desc: '3 carriles con andenes angostos. Hasta densidad media.',
+    name: 'Calle de 3 carriles', icon: '🚗', cost: 10000, upkeep: 4, dens: 3, car: true, bus: true, truck: true, speed: 1.25,
+    lv: -0.01, rank: 2.5, maxSlope: 0.18, color: '#3b3f45', desc: '3 carriles con andenes angostos.',
     profile: [P('walk', 1.5), P('lane', 3, -1), P('lane', 3, 1), P('lane', 3, 1), P('walk', 1.5)],
   },
   avenida: {
