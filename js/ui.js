@@ -7,7 +7,7 @@ import {
   canPlacePublic, placePublic, bulldoze, removeBuilding, markDirty, flush, buildRoad, roadTileCheck,
   zoneProblem, estratoOf, buildingLabel, refreshOverlay, idx,
 } from './game.js';
-import { ROADS, ROAD_ORDER, roadPlan } from './roads.js';
+import { ROADS, ROAD_ORDER, roadPlan, diagLines } from './roads.js';
 import { PUBLIC, SERVICES, buildPublic } from './buildings.js';
 import { tierOf } from './models_com.js';
 import { IND_TYPES } from './models_ind.js';
@@ -271,7 +271,8 @@ function updatePreview() {
       if (c.why === 'pendiente') steep++;
       return { x: p.x, y: p.y, ok: c.ok, why: c.why };
     });
-    setPreview(prev);
+    if (plan.diag) setPreview(diagPreview(plan, T0.k, prev));
+    else setPreview(prev);
     if (UI.drag) info.textContent = `${ROADS[T0.k].name}: ${Math.round(u2m(plan.diag ? (plan.diag.s1 - plan.diag.s0) * Math.SQRT2 : plan.length / ROADS[T0.k].w))} m de largo${plan.diag ? ' (diagonal)' : ''} · costo ${fmt(cost)}` + (bad ? ` · ${bad} casillas bloqueadas` : '') + (steep ? ` · pendiente mayor a ${Math.round(ROADS[T0.k].maxSlope * 100)} %${T0.k !== 'peatonal' ? ': usa calle peatonal (hasta 40 %)' : ''}` : '');
   } else if (T0.type === 'zone') {
     const tiles = UI.drag ? rectTiles(UI.drag.start, h) : [{ x: h.x, y: h.y }];
@@ -297,6 +298,28 @@ function updatePreview() {
     else if (sel && sel.kind === 'stop') list.push({ x: sel.stop.x, y: sel.stop.y, ok: true });
     setPreview(list, 'info');
   }
+}
+
+// banda girada de una vía diagonal: cuadros de 12 m a lo largo del eje, tantos como el ancho de la vía
+function diagPreview(plan, k, prev) {
+  const { line, dy, s0, s1 } = plan.diag;
+  const bad = new Set(prev.filter((p) => !p.ok).map((p) => p.x + ',' + p.y));
+  const m = diagLines(ROADS[k].w) - 1;
+  const lanes = Math.max(1, Math.round(ROADS[k].meters / 12));
+  const ux = Math.SQRT1_2, uy = dy * Math.SQRT1_2, nx = -dy * Math.SQRT1_2, ny = Math.SQRT1_2;
+  const ox = s0 + m / 4, oy = dy * (s0 - line - m / 4);
+  const L = (s1 - s0) * Math.SQRT2;
+  const ang = Math.atan2(nx, ny);
+  const out = [];
+  for (let t = 0.5; t < Math.max(1, L); t += 1) {
+    for (let j = 0; j < lanes; j++) {
+      const o = j - (lanes - 1) / 2;
+      const px = ox + ux * t + nx * o, py = oy + uy * t + ny * o;
+      const tx = Math.round(px), ty = Math.round(py);
+      out.push({ x: tx, y: ty, px, py, ang, ok: !bad.has(tx + ',' + ty) });
+    }
+  }
+  return out;
 }
 
 // ---------- acciones ----------

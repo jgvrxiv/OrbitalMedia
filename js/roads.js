@@ -156,13 +156,16 @@ export function buildRoadMesh(grid, net) {
   B.litP = 0;
   const roadAt = (x, y) => (x >= 0 && y >= 0 && x < N && y < N ? grid[y][x].road : null);
   const L = 0.03;
+  const J = net ? planJunctions(net) : { list: [], covered: new Set(), trim: new Map() };
   for (let y = 0; y < N; y++) {
     for (let x = 0; x < N; x++) {
       const t = grid[y][x].road;
       if (!t) continue;
+      if (J.covered.has(y * N + x)) continue; // lo dibuja el polígono del cruce
       const R = ROADS[t.k];
       const x0 = x - N / 2, x1 = x0 + 1, z0 = y - N / 2, z1 = z0 + 1;
-      const nb = DIRS.map(([dx, dy]) => roadAt(x + dx, y + dy));
+      // las casillas en escalera de una diagonal no cuentan como vía vecina (la diagonal se dibuja aparte)
+      const nb = DIRS.map(([dx, dy]) => { const r = roadAt(x + dx, y + dy); return r && r.ax === 3 ? null : r; });
 
       // ---- cruces: pavimento del tipo dominante y cebras en las bocas ----
       if (t.ax === 2) {
@@ -305,8 +308,8 @@ export function buildRoadMesh(grid, net) {
       void gl; void gr;
     }
   }
-  const junctions = net ? buildJunctions(B, net) : new Map();
-  if (net) for (const seg of net.segs) if (seg.ax === 3) diagRibbon(B, seg, net, junctions);
+  for (const j of J.list) drawJunction(B, j);
+  if (net) for (const seg of net.segs) if (seg.ax === 3) diagRibbon(B, seg, net, J.trim);
   return B.build();
 }
 
@@ -406,64 +409,112 @@ const halfWidths = (k) => {
   return { full: R.meters / 2 / MPT, cw: (R.meters / 2 - side) / MPT };
 };
 
-function buildJunctions(B, net) {
-  const out = new Map();
-  const L = 0.03;
+// Planifica los cruces donde llega una diagonal. Cada brazo se corta a una distancia del nodo; las esquinas
+// del andén y de la calzada salen de cruzar el borde de un brazo con el del brazo siguiente (como un cordón
+// de esquina), en vez de rellenar con la envolvente. Las casillas de los brazos rectos dentro del cruce no
+// se dibujan por casilla.
+function planJunctions(net) {
+  const list = [], covered = new Set(), trim = new Map();
   for (const [key, node] of net.nodes) {
     const segs = node.segs.map((id) => net.byId.get(id)).filter(Boolean);
     if (segs.length < 2 || !segs.some((s) => s.ax === 3)) continue;
-    // brazos: dirección hacia afuera y punto del eje en el nodo (coordenadas de casilla)
     const arms = segs.map((seg) => {
-      const atStart = key === `${node.x},${node.y}` && (seg.ax === 3 ? seg.s0 === node.x : seg.ax === 0 ? seg.s0 === node.x : seg.s0 === node.y);
+      const atStart = seg.ax === 1 ? seg.s0 === node.y : seg.s0 === node.x;
       const sgn = atStart ? 1 : -1;
-      let d, ax0;
+      const hw = halfWidths(seg.k);
       if (seg.ax === 3) {
-        d = [sgn * Math.SQRT1_2, sgn * seg.dy * Math.SQRT1_2];
         const m = diagLines(ROADS[seg.k].w) - 1;
-        ax0 = [node.x + m / 4, node.y - seg.dy * m / 4];
-      } else {
-        d = seg.ax === 0 ? [sgn, 0] : [0, sgn];
-        ax0 = [node.x, node.y];
+        return { seg, d: [sgn * Math.SQRT1_2, sgn * seg.dy * Math.SQRT1_2], o: [node.x + m / 4, node.y - seg.dy * m / 4], hw, diag: true };
       }
-      return { seg, d, ax0, hw: halfWidths(seg.k) };
+      const mid = (seg.offs[0] + seg.offs[seg.offs.length - 1]) / 2;
+      const o = seg.ax === 0 ? [node.x, node.y + mid] : [node.x + mid, node.y];
+      return { seg, d: seg.ax === 0 ? [sgn, 0] : [0, sgn], o, hw, diag: false };
     });
-    const r = Math.max(0.5, ...arms.map((a) => a.hw.full)) + 0.08;
-    out.set(key, r);
-    const outer = [], inner = [];
+    const maxOrtho = Math.max(0, ...arms.filter((a) => !a.diag).map((a) => a.hw.full));
     for (const a of arms) {
-      const n = [-a.d[1], a.d[0]];
-      const dist = a.seg.ax === 3 ? r : 0.5; // los brazos rectos ya llegan hasta el borde de la casilla del nodo
-      const c = [a.ax0[0] + a.d[0] * dist, a.ax0[1] + a.d[1] * dist];
-      for (const sg of [-1, 1]) {
-        outer.push([c[0] + n[0] * a.hw.full * sg, c[1] + n[1] * a.hw.full * sg]);
-        inner.push([c[0] + n[0] * a.hw.cw * sg, c[1] + n[1] * a.hw.cw * sg]);
+      if (a.diag) {
+        // la diagonal debe salir del todo de la franja de las demás vías antes de empezar su cinta
+        const other = Math.max(maxOrtho, ...arms.filter((b) => b !== a).map((b) => b.hw.full));
+        a.cut = (other + a.hw.full) * Math.SQRT2 + 0.1;
+      } else {
+        // los brazos rectos se cortan en el borde de la casilla siguiente al nodo
+        a.cut = 1.5;
+        for (let k = 0; k <= 1; k++) for (const off of a.seg.offs) {
+          const s = (a.seg.ax === 0 ? node.x : node.y) + k * a.d[a.seg.ax === 0 ? 0 : 1];
+          const [x, y] = a.seg.ax === 0 ? [s, a.seg.line + off] : [a.seg.line + off, s];
+          covered.add(y * N + x);
+        }
       }
     }
-    const W = (p) => [p[0] - N / 2 + 0.5, p[1] - N / 2 + 0.5];
-    const fan = (poly, lift, color) => {
-      const ps = poly.map(W);
-      const cx = ps.reduce((s, p) => s + p[0], 0) / ps.length, cz = ps.reduce((s, p) => s + p[1], 0) / ps.length;
-      for (let i = 0; i < ps.length; i++) {
-        const a = ps[i], b = ps[(i + 1) % ps.length];
-        B.tri([cx, H(cx, cz) + lift, cz], [b[0], H(b[0], b[1]) + lift, b[1]], [a[0], H(a[0], a[1]) + lift, a[1]], color);
-      }
-    };
-    const k = arms.reduce((best, a) => (ROADS[a.seg.k].rank > ROADS[best.seg.k].rank ? a : best)).seg.k;
-    fan(hull(outer), L + 0.03, COL.walk);
-    fan(hull(inner), L + 0.034, ROADS[k].color);
-    // cebras en los brazos diagonales, justo afuera del cruce
-    for (const a of arms) {
-      if (a.seg.ax !== 3 || a.seg.k === 'tierra' || a.seg.k === 'peatonal') continue;
-      const n = [-a.d[1], a.d[0]];
-      const n5 = Math.max(3, Math.round(a.hw.cw * 2 / 0.17));
-      for (let i = 0; i < n5; i++) {
-        const t0 = -a.hw.cw + (i + 0.2) * (2 * a.hw.cw / n5), t1 = t0 + 0.6 * (2 * a.hw.cw / n5);
-        const q = (u, v) => W([a.ax0[0] + a.d[0] * u + n[0] * v, a.ax0[1] + a.d[1] * u + n[1] * v]);
-        const p1 = q(r + 0.05, t0), p2 = q(r + 0.05, t1), p3 = q(r + 0.2, t1), p4 = q(r + 0.2, t0);
-        const y = (p) => [p[0], H(p[0], p[1]) + L + 0.012, p[1]];
-        B.quad(y(p1), y(p2), y(p3), y(p4), WHITE);
-      }
+    for (const a of arms) if (a.diag) trim.set(key, Math.max(trim.get(key) || 0, a.cut));
+    arms.sort((p, q) => Math.atan2(p.d[1], p.d[0]) - Math.atan2(q.d[1], q.d[0]));
+    list.push({ node, arms });
+  }
+  return { list, covered, trim };
+}
+
+const isect = (p, d, q, e) => {
+  const den = d[0] * e[1] - d[1] * e[0];
+  if (Math.abs(den) < 1e-6) return null;
+  const t = ((q[0] - p[0]) * e[1] - (q[1] - p[1]) * e[0]) / den;
+  return [p[0] + d[0] * t, p[1] + d[1] * t];
+};
+
+function junctionPoly(arms, which) {
+  const poly = [];
+  for (let i = 0; i < arms.length; i++) {
+    const a = arms[i], b = arms[(i + 1) % arms.length];
+    const w = a.hw[which], wb = b.hw[which];
+    const na = [-a.d[1], a.d[0]], nb = [-b.d[1], b.d[0]];
+    const cut = (arm, nn, ww, sg) => [arm.o[0] + arm.d[0] * arm.cut + nn[0] * ww * sg, arm.o[1] + arm.d[1] * arm.cut + nn[1] * ww * sg];
+    poly.push(cut(a, na, w, -1), cut(a, na, w, 1));
+    // esquina entre el borde izquierdo de a y el derecho de b
+    const pa = [a.o[0] + na[0] * w, a.o[1] + na[1] * w], pb = [b.o[0] - nb[0] * wb, b.o[1] - nb[1] * wb];
+    const c = isect(pa, a.d, pb, b.d);
+    const lim = Math.max(a.cut, b.cut);
+    const cx = arms.reduce((s, x) => s + x.o[0], 0) / arms.length, cy = arms.reduce((s, x) => s + x.o[1], 0) / arms.length;
+    if (c && Math.hypot(c[0] - cx, c[1] - cy) < lim * 1.05) {
+      // la esquina sólo sirve si queda entre los dos cortes (si no, se unen los cortes directamente)
+      const ta = (c[0] - a.o[0]) * a.d[0] + (c[1] - a.o[1]) * a.d[1];
+      const tb = (c[0] - b.o[0]) * b.d[0] + (c[1] - b.o[1]) * b.d[1];
+      if (ta < a.cut && tb < b.cut) poly.push(c);
     }
   }
-  return out;
+  return poly;
+}
+
+function drawJunction(B, j) {
+  const L = 0.03;
+  const W = (p) => [p[0] - N / 2 + 0.5, p[1] - N / 2 + 0.5];
+  const cx = j.arms.reduce((s, a) => s + a.o[0], 0) / j.arms.length, cy = j.arms.reduce((s, a) => s + a.o[1], 0) / j.arms.length;
+  const fan = (poly, lift, color) => {
+    const [wx, wz] = W([cx, cy]);
+    const ps = poly.map(W);
+    for (let i = 0; i < ps.length; i++) {
+      const a = ps[i], b = ps[(i + 1) % ps.length];
+      B.tri([wx, H(wx, wz) + lift, wz], [b[0], H(b[0], b[1]) + lift, b[1]], [a[0], H(a[0], a[1]) + lift, a[1]], color);
+    }
+  };
+  const k = j.arms.reduce((best, a) => (ROADS[a.seg.k].rank > ROADS[best.seg.k].rank ? a : best)).seg.k;
+  const outer = junctionPoly(j.arms, 'full');
+  fan(outer, L + 0.035, COL.walk);
+  // bordillo alrededor del andén
+  const po = outer.map(W);
+  for (let i = 0; i < po.length; i++) {
+    const a = po[i], b = po[(i + 1) % po.length];
+    B.quad([a[0], H(a[0], a[1]) + L, a[1]], [b[0], H(b[0], b[1]) + L, b[1]], [b[0], H(b[0], b[1]) + L + 0.035, b[1]], [a[0], H(a[0], a[1]) + L + 0.035, a[1]], '#9d9a92');
+  }
+  fan(junctionPoly(j.arms, 'cw'), L + 0.037, ROADS[k].color);
+  // cebras en cada brazo, justo antes del corte
+  for (const a of j.arms) {
+    if (a.seg.k === 'tierra' || a.seg.k === 'peatonal') continue;
+    const n = [-a.d[1], a.d[0]];
+    const cnt = Math.max(3, Math.round((a.hw.cw * 2) / 0.17));
+    for (let i = 0; i < cnt; i++) {
+      const t0 = -a.hw.cw + (i + 0.2) * ((2 * a.hw.cw) / cnt), t1 = t0 + 0.6 * ((2 * a.hw.cw) / cnt);
+      const q = (u, v) => W([a.o[0] + a.d[0] * u + n[0] * v, a.o[1] + a.d[1] * u + n[1] * v]);
+      const y = (p) => [p[0], H(p[0], p[1]) + L + 0.04, p[1]];
+      B.quad(y(q(a.cut - 0.2, t0)), y(q(a.cut - 0.2, t1)), y(q(a.cut - 0.05, t1)), y(q(a.cut - 0.05, t0)), WHITE);
+    }
+  }
 }

@@ -476,6 +476,7 @@ export function setParcelLookup(fn) { parcelAt = fn; }
 export function setPreview(tiles, mode) {
   S.preview.set(tiles.map((t) => {
     const c = t.color || (t.ok ? (mode === 'info' ? BLUE : GREEN) : RED);
+    if (t.ang !== undefined && t.ang !== null) return { x: t.x, y: t.y, px: t.px, py: t.py, ang: t.ang, color: c };
     const p = parcelAt(t.x, t.y);
     return p ? { x: t.x, y: t.y, px: p.px, py: p.py, ang: p.ang, color: c } : { x: t.x, y: t.y, color: c };
   }));
