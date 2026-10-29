@@ -26,7 +26,7 @@ const SECTIONS = [
   ] },
   { title: 'Vías', items: ROAD_ORDER.map((k, i) => ({
     icon: ROADS[k].icon, name: ROADS[k].name, sub: `${u2m(ROADS[k].w)} m de ancho · ${ROADS[k].desc}`,
-    price: fmt(ROADS[k].cost) + '/u', tool: { type: 'road', k }, key: i === 2 ? 'r' : undefined,
+    price: fmt(ROADS[k].cost) + '/u', tool: { type: 'road', k }, key: i === 2 ? 'c' : undefined,
   })) },
   { title: 'Zonas', items: Object.entries(ZONES).map(([z, Z]) => ({
     swatch: Z.color, name: Z.name, sub: zoneSub(Z), price: fmt(COST.zone) + '/u', tool: { type: 'zone', z: +z },
@@ -274,6 +274,9 @@ const keys = new Set();
 function bindInput() {
   const cv = S.canvas;
   cv.addEventListener('contextmenu', (e) => e.preventDefault());
+  // el juego puede estar dentro de un marco (visor de artifacts): al tocar el mapa toma el foco del teclado
+  cv.tabIndex = 0;
+  cv.addEventListener('pointerdown', () => { cv.focus({ preventScroll: true }); window.focus(); });
   cv.addEventListener('pointerdown', (e) => {
     cv.setPointerCapture(e.pointerId);
     const t = pickTile(e.clientX, e.clientY);
@@ -335,6 +338,7 @@ function bindInput() {
     if (e.target.tagName === 'INPUT') return;
     const k = e.key.toLowerCase();
     keys.add(k);
+    if (k.startsWith('arrow') || k === 'pageup' || k === 'pagedown') e.preventDefault();
     if (k === 'escape') {
       if (UI.tool.type === 'line' && UI.lineStops.length) { cancelLine(); startLine(); } else setTool({ type: 'inspect' });
     } else if (k === 'enter') finishLine();
@@ -349,7 +353,9 @@ function bindInput() {
 }
 
 export function cameraKeys(dt) {
-  const sp = S.cam.dist * 0.9 * dt;
+  const sp = S.cam.dist * 0.9 * dt * (keys.has('shift') ? 2.5 : 1);
+  if (keys.has('r') || keys.has('pageup')) S.cam.pitch += dt * 0.9;
+  if (keys.has('f') || keys.has('pagedown')) S.cam.pitch -= dt * 0.9;
   let dx = 0, dy = 0;
   if (keys.has('w') || keys.has('arrowup')) dy += 1;
   if (keys.has('s') || keys.has('arrowdown')) dy -= 1;

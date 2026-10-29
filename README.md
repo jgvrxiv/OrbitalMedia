@@ -48,8 +48,8 @@ Luego visita http://localhost:8000. El botón **🏙️ Ejemplo** genera una ciu
 
 ### Controles
 
-Clic derecho + arrastrar = girar · rueda = zoom · WASD/flechas o arrastrar con *Inspeccionar* = mover ·
-Q/E = girar · Espacio = pausa · N = día/noche · G = cuadrícula · 1-9 = zonas · Esc = cancelar ·
+Clic derecho + arrastrar = girar e inclinar · rueda o Z/X = zoom · WASD/flechas o arrastrar con *Inspeccionar* = mover
+(Shift = rápido) · Q/E = girar 360° · R/F = inclinar · Espacio = pausa · N = día/noche · G = cuadrícula · 1-9 = zonas · Esc = cancelar ·
 Enter = terminar línea.
 
 ### Estructura

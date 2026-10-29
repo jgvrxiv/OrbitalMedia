@@ -345,7 +345,7 @@ export function setTime(t) {
 export function updateCamera() {
   const c = S.cam;
   c.dist = Math.min(220, Math.max(6, c.dist));
-  c.pitch = Math.min(1.4, Math.max(0.3, c.pitch));
+  c.pitch = Math.min(1.53, Math.max(0.22, c.pitch)); // de casi rasante (≈13°) a casi en planta (≈88°)
   const lim = N / 2 + 6;
   c.x = Math.max(-lim, Math.min(lim, c.x));
   c.z = Math.max(-lim, Math.min(lim, c.z));
