@@ -95,6 +95,17 @@ vías, buses y carros) sigue leyendo casillas y se ve igual que antes.
   sentidos únicos.
 - Pendiente: cruces con forma propia (hoy el cruce es pavimento en las casillas compartidas).
 
+## 2d. Fase 3 iniciada: lotes generados por la vía
+
+`js/parcels.js` genera, para cada segmento diagonal, filas de lotes de 12 m de frente a cada lado de la
+vía (hasta 2 de fondo), alineados con ella. Cada lote se asocia a la casilla que contiene su centro; los
+solapes se resuelven dando prioridad al lote más cercano a la vía y a la vía de mayor rango. Los edificios
+se ubican en el centro del lote, girados para mirar la vía y a tamaño completo, y la capa de zonas dibuja
+los lotes girados. Las casillas sobrantes junto a la escalera de la diagonal quedan sin acceso (zona verde).
+
+Siguiente paso: generar también los lotes de las vías ortogonales desde el segmento (hoy coinciden con las
+casillas) y luego admitir segmentos curvos con el mismo generador.
+
 ## 3. Relieve: qué se implementó
 
 Se implementó **relieve real sin terraformación**:
@@ -108,9 +119,10 @@ Se implementó **relieve real sin terraformación**:
 - **Edificios sobre plataformas**: cada lote se apoya en la esquina más alta y debajo aparece un muro de
   contención hasta la esquina más baja. Así una ladera construida se ve escalonada, como los barrios de
   ladera en Medellín, sin modificar el terreno.
-- **Pendiente máxima por densidad** (desnivel sobre 12 m): alta ≤ 18 %, media ≤ 25 %, baja ≤ 35 % (la
-  vivienda de baja densidad tolera hasta 45 %). El valle tiene unos 120 m de desnivel total y pendientes
-  típicas de 15 a 30 %, como las laderas de Medellín. Hay una capa de información **Pendiente** para verlo.
+- **Pendiente máxima por densidad** (desnivel sobre 12 m): alta ≤ 10 %, media ≤ 16 %, baja ≤ 25 % (la
+  vivienda de baja densidad tolera hasta 35 %). **Vías**: calles hasta 20 %, avenidas 10-12 %, troncal 8 %,
+  autopista 6 %; por encima de 20 % y hasta 40 % sólo caben calles peatonales (escaleras). El valle tiene
+  unos 80 m de desnivel, pendientes típicas de 9 % y un escarpe en la ladera occidental de 25-40 %. Hay una capa de información **Pendiente** para verlo.
 - **Metrocable con relieve**: el cable va recto entre estaciones; si el tramo atraviesa la montaña se
   rechaza y se pide una estación intermedia. Las torres miden lo necesario según el terreno.
 - **Vehículos, árboles y cámara** usan la altura bilineal del terreno; la selección con el ratón se hace

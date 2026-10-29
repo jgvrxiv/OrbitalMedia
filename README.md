@@ -65,6 +65,7 @@ Enter = terminar línea.
 | `js/roads.js` | Tipos de vía y malla de vías sobre el relieve. |
 | `js/roadnet.js` | Red vial como grafo (segmentos ortogonales y diagonales, nodos) proyectada sobre la cuadrícula. |
 | `js/netpath.js` | Rutas de bus y caminatas de carros sobre el grafo. |
+| `js/parcels.js` | Lotes generados a partir de las vías diagonales (fase 3). |
 | `js/scene.js` | Escena, relieve, cielo día/noche, cámara y selección. |
 | `js/game.js` | Estado, construcción y simulación (valor del suelo, demanda, economía). |
 | `js/transit.js` | Paradas, líneas, vehículos y tráfico ambiente. |

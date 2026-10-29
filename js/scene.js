@@ -42,7 +42,7 @@ const sstep = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a)
 // Altura analítica del terreno en coordenadas de mundo.
 export function terrainFn(x, z) {
   x /= K; z /= K;
-  return terrainBase(x, z) * (S.terrain === 'llano' ? 1 : 1.1);
+  return terrainBase(x, z) * (S.terrain === 'llano' ? 1 : 0.6);
 }
 function terrainBase(x, z) {
   if (S.terrain === 'llano') {
@@ -51,6 +51,8 @@ function terrainBase(x, z) {
   // Valle andino: fondo plano, laderas al oriente y occidente, colinas al norte y sur
   const ax = Math.abs(x + fbm(z * 0.03, 3.1) * 5), az = Math.abs(z);
   let h = 7.2 * sstep(9, 33, ax) + 2.6 * sstep(18, 42, az) + 5 * sstep(32, 60, Math.max(ax, az));
+  // escarpe en la ladera occidental (zona de escaleras y calles peatonales)
+  h += x < 0 ? 2.6 * sstep(20, 26, ax) : 0;
   h += fbm(x * 0.05, z * 0.05) * (0.1 + 0.5 * sstep(5, 28, ax));
   return h;
 }
@@ -420,10 +422,20 @@ export class TileLayer {
     const P = this.mesh.geometry.attributes.position.array, C = this.mesh.geometry.attributes.color.array;
     for (let k = 0; k < n; k++) {
       const t = list[k];
-      const x0 = t.x - N / 2 + inset, x1 = t.x + 1 - N / 2 - inset, z0 = t.y - N / 2 + inset, z1 = t.y + 1 - N / 2 - inset;
       const L = this.lift + (t.lift || 0);
-      const h00 = heightAt(x0, z0) + L, h10 = heightAt(x1, z0) + L, h01 = heightAt(x0, z1) + L, h11 = heightAt(x1, z1) + L;
-      const v = [x0, h01, z1, x1, h11, z1, x1, h10, z0, x0, h01, z1, x1, h10, z0, x0, h00, z0];
+      let v;
+      if (t.ang !== undefined && t.ang !== null) {
+        // cuadro girado (lote alineado con una vía diagonal)
+        const cx = t.px - N / 2 + 0.5, cz = t.py - N / 2 + 0.5, hs = 0.5 - inset;
+        const c = Math.cos(t.ang), sn = Math.sin(t.ang);
+        const P = (a, b) => { const x = cx + a * c + b * sn, z = cz - a * sn + b * c; return [x, heightAt(x, z) + L, z]; };
+        const A = P(-hs, hs), B = P(hs, hs), C = P(hs, -hs), D = P(-hs, -hs);
+        v = [...A, ...B, ...C, ...A, ...C, ...D];
+      } else {
+        const x0 = t.x - N / 2 + inset, x1 = t.x + 1 - N / 2 - inset, z0 = t.y - N / 2 + inset, z1 = t.y + 1 - N / 2 - inset;
+        const h00 = heightAt(x0, z0) + L, h10 = heightAt(x1, z0) + L, h01 = heightAt(x0, z1) + L, h11 = heightAt(x1, z1) + L;
+        v = [x0, h01, z1, x1, h11, z1, x1, h10, z0, x0, h01, z1, x1, h10, z0, x0, h00, z0];
+      }
       P.set(v, k * 18);
       this.c.set(t.color);
       for (let i = 0; i < 6; i++) { C[k * 18 + i * 3] = this.c.r; C[k * 18 + i * 3 + 1] = this.c.g; C[k * 18 + i * 3 + 2] = this.c.b; }

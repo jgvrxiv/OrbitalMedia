@@ -9,6 +9,7 @@ import { S, N, tw, Trees, TileLayer, padOf, tileCenterH, applyCornerLevels, hC0 
 import { mats, rng, Builder } from './geom.js';
 import { InstPools } from './render.js';
 import { ROADS, buildRoadMesh } from './roads.js';
+import { diagParcels } from './parcels.js';
 import { createNet, lanesOf, addSegment, removeCell, rasterize, netFromTiles, serializeNet, loadNet, crossLevels } from './roadnet.js';
 import { buildModel, VARIANTS, typeName } from './models.js';
 import { pickResType, resPop } from './models_res.js';
@@ -34,8 +35,8 @@ export const ZONES = {
 };
 export const DENS_NAME = ['', 'Baja', 'Media', 'Alta'];
 export const ESTRATO_COLORS = ['#e5484d', '#f08a24', '#f2d024', '#6cc04a', '#2f9bd6', '#9b5de5'];
-// pendiente máxima del lote (desnivel / 12 m) por densidad: 35 %, 25 % y 18 %
-export const MAX_SLOPE = { 1: 0.35, 2: 0.25, 3: 0.18 };
+// pendiente máxima del lote (desnivel / 12 m) por densidad: 25 %, 16 % y 10 %
+export const MAX_SLOPE = { 1: 0.25, 2: 0.16, 3: 0.1 };
 const TAX = [-3, 4, 8, 18, 35, 60];
 const DMULT = { 1: 2.2, 2: 1.2, 3: 1 };
 const TIER_MULT = { 1: 1, 2: 1.3, 3: 1.7 };
@@ -119,7 +120,9 @@ function rebuildZones() {
   const list = [];
   for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
     const t = G.grid[y][x];
-    if (t.zone && !t.bld) list.push({ x, y, color: ZONES[t.zone].color });
+    if (!t.zone || t.bld) continue;
+    const pc = G.parcels?.get(idx(x, y));
+    list.push(pc ? { x, y, px: pc.px, py: pc.py, ang: pc.ang, color: ZONES[t.zone].color } : { x, y, color: ZONES[t.zone].color });
   }
   zoneLayer.set(list, 0.04);
 }
@@ -149,12 +152,17 @@ export function refreshOverlay() {
 }
 
 const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _p = new THREE.Vector3(), _s = new THREE.Vector3(), _up = new THREE.Vector3(0, 1, 0);
-const DIAG_SCALE = 0.74; // un lote girado 45° debe caber en su casilla
+// lote girado: los generados por una vía diagonal ocupan su propio cuadro de 12 m alineado con la vía;
+// los antiguos (sin centro propio) se reducen para caber en la casilla
+const DIAG_SCALE = 0.74;
 function bldMatrix(b, sy = 1) {
   const diag = b.da !== undefined && b.da !== null;
+  const own = diag && b.px !== null && b.px !== undefined;
   _q.setFromAxisAngle(_up, diag ? b.da : ROT[b.rot] ?? 0);
-  _p.set(tw(b.x) + (b.w - 1) / 2, b.top, tw(b.y) + (b.h - 1) / 2);
-  _s.set(diag ? DIAG_SCALE : 1, sy, diag ? DIAG_SCALE : 1);
+  if (own) _p.set(b.px - N / 2 + 0.5, b.top, b.py - N / 2 + 0.5);
+  else _p.set(tw(b.x) + (b.w - 1) / 2, b.top, tw(b.y) + (b.h - 1) / 2);
+  const k = own ? 0.97 : diag ? DIAG_SCALE : 1;
+  _s.set(k, sy, k);
   return _m.compose(_p, _q, _s);
 }
 
@@ -186,23 +194,32 @@ function detach(b) {
 function recomputeAccess() {
   G.access.fill(0);
   G.face.fill(-1);
+  // vías ortogonales: los lotes son las casillas vecinas (o a dos casillas en baja densidad)
+  const ortho = (x, y) => { const r = roadAt(x, y); return r && r.ax !== 3 ? r : null; };
   for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
     if (G.grid[y][x].road) continue;
     let best = 0, dir = -1;
     DIRS.forEach(([dx, dy], d) => {
-      const r = roadAt(x + dx, y + dy);
+      const r = ortho(x + dx, y + dy);
       if (r && ROADS[r.k].dens > best) { best = ROADS[r.k].dens; dir = d; }
     });
     if (!best) {
       DIRS.forEach(([dx, dy], d) => {
         if (best) return;
-        const r = roadAt(x + 2 * dx, y + 2 * dy);
+        const r = ortho(x + 2 * dx, y + 2 * dy);
         const mid = tile(x + dx, y + dy);
         if (r && ROADS[r.k].dens > 0 && mid && !mid.road) { best = 1; dir = d; }
       });
     }
     G.access[idx(x, y)] = best;
     G.face[idx(x, y)] = dir;
+  }
+  // vías diagonales: lotes generados por la propia vía, alineados con ella
+  G.parcels = diagParcels(G.net, G.grid, N);
+  for (const [i, p] of G.parcels) {
+    if (G.access[i] >= p.dens) { G.parcels.delete(i); continue; } // la vía ortogonal ya da mejor frente
+    G.access[i] = p.dens;
+    G.face[i] = -1;
   }
 }
 
@@ -318,7 +335,7 @@ function recalc(b) {
 export function addBuilding(o) {
   const b = {
     id: G.nextId++, kind: o.kind, d: o.d || 1, e: o.e || 1, type: o.type || null, v: o.v ?? Math.floor(rand() * VARIANTS),
-    x: o.x, y: o.y, w: o.w || 1, h: o.h || 1, rot: o.rot ?? 2, da: o.da ?? null, key: o.key || null, pop: 0, jobs: 0,
+    x: o.x, y: o.y, w: o.w || 1, h: o.h || 1, rot: o.rot ?? 2, da: o.da ?? null, px: o.px ?? null, py: o.py ?? null, key: o.key || null, pop: 0, jobs: 0,
   };
   for (let j = 0; j < b.h; j++) for (let i = 0; i < b.w; i++) G.grid[b.y + j][b.x + i].bld = b;
   recalc(b);
@@ -514,7 +531,7 @@ export function canPlacePublic(key, x, y) {
   for (let j = 0; j < d.h; j++) { if (isRoad(x - 1, y + j)) sides[3]++; if (isRoad(x + d.w, y + j)) sides[1]++; }
   const best = sides.indexOf(Math.max(...sides));
   const noRoad = sides[best] === 0;
-  const steep = padOf(x, y, d.w, d.h).slope > 0.35;
+  const steep = padOf(x, y, d.w, d.h).slope > 0.2;
   if (noRoad || steep) { ok = false; tiles.forEach((t) => { t.ok = false; }); }
   return { ok, tiles, noRoad, steep, rot: best };
 }
@@ -558,23 +575,11 @@ export function bulldoze(tiles) {
 // ---------- simulación ----------
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
-// Si el frente del lote da a una vía diagonal, ángulo para que la fachada (+Z del modelo) la mire a 45°.
-function diagFacing(x, y) {
-  const d = G.face[idx(x, y)];
-  if (d < 0) return null;
-  const [dx, dy] = DIRS[d];
-  const r = roadAt(x + dx, y + dy);
-  if (!r || r.ax !== 3) return null;
-  // normales posibles de la diagonal (dirección (1, dy)): (-dy, 1) y (dy, -1); se elige la que apunta a la vía
-  let nx = -r.dy, nz = 1;
-  if (nx * dx + nz * dy < 0) { nx = -nx; nz = -nz; }
-  return Math.atan2(nx, nz);
-}
-
 function spawn(t) {
   const Z = ZONES[t.zone];
   const i = idx(t.x, t.y);
-  const base = { x: t.x, y: t.y, d: Z.d, rot: G.face[i] >= 0 ? G.face[i] : 2, da: diagFacing(t.x, t.y) };
+  const pc = G.parcels?.get(i);
+  const base = { x: t.x, y: t.y, d: Z.d, rot: G.face[i] >= 0 ? G.face[i] : 2, da: pc ? pc.ang : null, px: pc ? pc.px : null, py: pc ? pc.py : null };
   if (Z.k === 'r') {
     let e = estratoOf(G.lv[i]);
     if (e > 1 && rand() < 0.2) e--;
@@ -714,7 +719,7 @@ export function serialize() {
   }
   return {
     v: 3, terrain: S.terrain, seed: G.seed, money: G.money, month: G.month, ticks: G.ticks, net: serializeNet(G.net), zones,
-    blds: G.buildings.map((b) => ({ kind: b.kind, d: b.d, e: b.e, type: b.type, v: b.v, x: b.x, y: b.y, w: b.w, h: b.h, rot: b.rot, da: b.da, key: b.key })),
+    blds: G.buildings.map((b) => ({ kind: b.kind, d: b.d, e: b.e, type: b.type, v: b.v, x: b.x, y: b.y, w: b.w, h: b.h, rot: b.rot, da: b.da, px: b.px, py: b.py, key: b.key })),
   };
 }
 

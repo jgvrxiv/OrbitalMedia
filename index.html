@@ -27,6 +27,7 @@
       <button data-speed="4">⏭</button>
     </div>
     <div class="menu">
+      <button id="bStats" title="Estadísticas (T)">📊</button>
       <button id="bDemo" title="Generar una ciudad de ejemplo">🏙️ Ejemplo</button>
       <button id="bSave">💾</button>
       <button id="bLoad">📂</button>
@@ -77,9 +78,9 @@
         <li><b>Estrato:</b> no se elige. Sale del <b>valor del suelo</b>: servicios cercanos, tipo de vía, comercio y contaminación. Un mismo barrio puede empezar en estrato 1 o en estrato 5 según lo que tenga alrededor, y sube o baja con el tiempo.</li>
         <li><b>Industria:</b> da empleo y produce bienes para el comercio; si falta, la ciudad importa; si sobra, exporta. Contamina y baja el estrato de los vecinos.</li>
         <li><b>Transporte:</b> paraderos en calles/avenidas/troncales y estaciones de Metrocable (ideales en laderas). Crea líneas haciendo clic en las paradas en orden y Enter.</li>
-        <li><b>Relieve:</b> las laderas empinadas sólo admiten baja densidad; usa la capa <i>Pendiente</i>.</li>
+        <li><b>Relieve:</b> las calles suben hasta 20 % de pendiente; entre 20 % y 40 % sólo caben calles peatonales. Las laderas sólo admiten baja densidad; usa la capa <i>Pendiente</i>.</li>
       </ol>
-      <p class="keys"><b>Controles:</b> presionar la rueda + arrastrar = girar e inclinar · girar la rueda o Z/X = zoom · clic derecho + arrastrar = desplazar · WASD/flechas = mover (Shift = rápido) · Q/E = girar 360° · R/F = inclinar · Espacio = pausa · N = día/noche · G = cuadrícula · Esc = cancelar</p>
+      <p class="keys"><b>Controles:</b> presionar la rueda + arrastrar = girar e inclinar · girar la rueda o Z/X = zoom · clic derecho + arrastrar = desplazar · WASD/flechas = mover (Shift = rápido) · Q/E = girar 360° · R/F = inclinar · Espacio = pausa · N = día/noche · T = estadísticas · G = cuadrícula · Esc = cancelar</p>
       <div class="row"><label class="terr">Terreno nuevo: <select id="terrSel"><option value="valle">Valle andino</option><option value="llano">Llano</option></select></label>
       <button id="helpNew">🗺️ Ciudad nueva</button><button id="helpDemo">🏙️ Ciudad de ejemplo</button><button id="helpClose" class="go">Continuar</button></div>
     </div>

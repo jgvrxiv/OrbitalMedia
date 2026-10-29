@@ -89,17 +89,17 @@ export function toast(msg, kind = '') {
   setTimeout(() => el.remove(), 3400);
 }
 
-let currentCat = 'roads';
+let currentCat = null;
 function buildToolbar() {
   const host = $('#tools');
-  host.innerHTML = '<nav class="cats"></nav><div class="catpanel"></div>';
+  host.innerHTML = '<nav class="cats"></nav><div class="catpanel" hidden></div>';
   const nav = host.querySelector('.cats');
   for (const c of CATEGORIES) {
     const b = document.createElement('button');
     b.className = 'cat';
     b.dataset.cat = c.id;
     b.innerHTML = `<span class="ic">${c.icon}</span><span>${c.label}</span>`;
-    b.onclick = () => showCategory(c.id);
+    b.onclick = () => showCategory(currentCat === c.id ? null : c.id);
     nav.appendChild(b);
   }
   showCategory(currentCat);
@@ -110,6 +110,8 @@ function showCategory(id) {
   document.querySelectorAll('.cat').forEach((b) => b.classList.toggle('on', b.dataset.cat === id));
   const panel = $('#tools .catpanel');
   panel.innerHTML = '';
+  panel.hidden = !id;
+  if (!id) return;
   const cat = CATEGORIES.find((c) => c.id === id);
   const groups = id === 'layers'
     ? [{ title: 'Capas de información', layers: true }]
@@ -261,15 +263,16 @@ function updatePreview() {
   if (!h) { setPreview([]); removeGhost(); return; }
   if (T0.type === 'road') {
     const plan = roadPlan(UI.drag ? UI.drag.start : h, h, T0.k);
-    let cost = 0, bad = 0;
+    let cost = 0, bad = 0, steep = 0;
     const prev = plan.map((p) => {
       const c = roadTileCheck(p, T0.k);
       if (c.ok && !c.same) cost += c.cost;
       if (!c.ok) bad++;
+      if (c.why === 'pendiente') steep++;
       return { x: p.x, y: p.y, ok: c.ok, why: c.why };
     });
     setPreview(prev);
-    if (UI.drag) info.textContent = `${ROADS[T0.k].name}: ${Math.round(u2m(plan.diag ? (plan.diag.s1 - plan.diag.s0) * Math.SQRT2 : plan.length / ROADS[T0.k].w))} m de largo${plan.diag ? ' (diagonal)' : ''} · costo ${fmt(cost)}` + (bad ? ` · ${bad} casillas bloqueadas (edificios o pendiente)` : '');
+    if (UI.drag) info.textContent = `${ROADS[T0.k].name}: ${Math.round(u2m(plan.diag ? (plan.diag.s1 - plan.diag.s0) * Math.SQRT2 : plan.length / ROADS[T0.k].w))} m de largo${plan.diag ? ' (diagonal)' : ''} · costo ${fmt(cost)}` + (bad ? ` · ${bad} casillas bloqueadas` : '') + (steep ? ` · pendiente mayor a ${Math.round(ROADS[T0.k].maxSlope * 100)} %${T0.k !== 'peatonal' ? ': usa calle peatonal (hasta 40 %)' : ''}` : '');
   } else if (T0.type === 'zone') {
     const tiles = UI.drag ? rectTiles(UI.drag.start, h) : [{ x: h.x, y: h.y }];
     const prev = tiles.map((p) => ({ ...p, ok: zoneOk(p.x, p.y, T0.z), color: zoneOk(p.x, p.y, T0.z) ? ZONES[T0.z].color : null }));
@@ -323,6 +326,7 @@ function clickTile(t) {
     else if (tl.bld) UI.selection = { kind: 'bld', b: tl.bld };
     else UI.selection = { kind: 'tile', x: t.x, y: t.y };
     showTab('info');
+    toggleStats(true);
     updatePreview();
   }
 }
@@ -407,6 +411,7 @@ function bindInput() {
     else if (k === ' ') { e.preventDefault(); setSpeed(G.speed === 0 ? 1 : 0); }
     else if (k === 'g') S.grid.visible = !S.grid.visible;
     else if (k === 'n') toggleCycle();
+    else if (k === 't') toggleStats();
     else if (k >= '1' && k <= '9' && !e.ctrlKey) setTool({ type: 'zone', z: +k });
     else for (const it of ALL_ITEMS) if (it.key === k && !e.ctrlKey && !e.metaKey) setTool(it.tool);
   });
@@ -662,6 +667,13 @@ export function updateClock() {
   $('#sClock').textContent = `${S.night > 0.5 ? '🌙' : '☀️'} ${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
 
+export function toggleStats(force) {
+  const side = $('#side');
+  const open = typeof force === 'boolean' ? force : side.classList.contains('closed');
+  side.classList.toggle('closed', !open);
+  $('#bStats').classList.toggle('on', open);
+}
+
 function toggleCycle() {
   S.dayCycle = !S.dayCycle;
   if (!S.dayCycle) setTime(10.5);
@@ -683,6 +695,8 @@ export function initUI() {
   $('#lineUndo').onclick = () => { UI.lineStops.pop(); updateLineBar(); };
   $('#lineCancel').onclick = () => { cancelLine(); startLine(); };
   $('#bCycle').onclick = toggleCycle;
+  $('#bStats').onclick = toggleStats;
+  toggleStats(false);
   $('#bCycle').classList.toggle('on', S.dayCycle);
   G.onToast = toast;
   setTool({ type: 'inspect' });
