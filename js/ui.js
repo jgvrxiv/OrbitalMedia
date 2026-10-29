@@ -18,32 +18,58 @@ const $ = (s, r = document) => r.querySelector(s);
 export const UI = { tool: { type: 'inspect' }, hover: null, drag: null, selection: null, lineStops: [], tab: 'city' };
 const TIER_NAME = ['', 'popular', 'medio', 'exclusivo'];
 
-// ---------- definición de herramientas ----------
-const SECTIONS = [
-  { title: 'Herramientas', items: [
-    { icon: '🔍', name: 'Inspeccionar', sub: 'Ver edificios, lotes y paradas', tool: { type: 'inspect' }, key: 'v' },
-    { icon: '🚧', name: 'Demoler', sub: 'Arrastra para borrar', tool: { type: 'bulldoze' }, key: 'b' },
+// ---------- definición de herramientas: categorías -> grupos -> elementos ----------
+const roadItem = (k) => ({
+  icon: ROADS[k].icon, name: ROADS[k].name, sub: `${u2m(ROADS[k].w)} m · ${ROADS[k].desc}`,
+  price: fmt(ROADS[k].cost) + '/u', tool: { type: 'road', k }, key: k === 'calle' ? 'c' : undefined,
+});
+const zoneItems = (kind) => Object.entries(ZONES).filter(([, Z]) => Z.k === kind).map(([z, Z]) => ({
+  swatch: Z.color, name: ['', 'Baja', 'Media', 'Alta'][Z.d], sub: zoneSub(Z), price: fmt(COST.zone) + '/u', tool: { type: 'zone', z: +z },
+}));
+const pubItem = (k) => ({ icon: PUBLIC[k].icon, name: PUBLIC[k].name, sub: `${PUBLIC[k].desc} Radio ${PUBLIC[k].radius} casillas.`, price: fmt(PUBLIC[k].cost), tool: { type: 'pub', key: k } });
+const CATEGORIES = [
+  { id: 'tools', icon: '🔍', label: 'Básico', groups: [
+    { title: 'Herramientas', items: [
+      { icon: '🔍', name: 'Inspeccionar', sub: 'Ver edificios, lotes y paradas', tool: { type: 'inspect' }, key: 'v' },
+      { icon: '🚧', name: 'Demoler', sub: 'Arrastra para borrar', tool: { type: 'bulldoze' }, key: 'b' },
+    ] },
   ] },
-  { title: 'Vías', items: ROAD_ORDER.map((k, i) => ({
-    icon: ROADS[k].icon, name: ROADS[k].name, sub: `${u2m(ROADS[k].w)} m de ancho · ${ROADS[k].desc}`,
-    price: fmt(ROADS[k].cost) + '/u', tool: { type: 'road', k }, key: i === 2 ? 'c' : undefined,
-  })) },
-  { title: 'Zonas', items: Object.entries(ZONES).map(([z, Z]) => ({
-    swatch: Z.color, name: Z.name, sub: zoneSub(Z), price: fmt(COST.zone) + '/u', tool: { type: 'zone', z: +z },
-  })) },
-  { title: 'Servicios públicos', items: Object.entries(PUBLIC).map(([k, d]) => ({
-    icon: d.icon, name: d.name, sub: SERVICES[d.cat].name + ' · radio ' + d.radius, price: fmt(d.cost), tool: { type: 'pub', key: k },
-  })) },
-  { title: 'Transporte público', items: [
-    { icon: '🚏', name: 'Paradero de bus', sub: 'Sobre calle, avenida o troncal', price: fmt(TR.TRANSIT.bus.stopCost), tool: { type: 'stop', st: 'bus' } },
-    { icon: '🚠', name: 'Estación Metrocable', sub: 'En un lote libre; ideal en laderas', price: fmt(TR.TRANSIT.cable.stopCost), tool: { type: 'stop', st: 'cable' } },
-    { icon: '🚌', name: 'Crear línea de bus', sub: 'Une paraderos en orden', price: fmt(TR.TRANSIT.bus.vehCost), tool: { type: 'line', st: 'bus' } },
-    { icon: '🚡', name: 'Crear línea Metrocable', sub: 'Une estaciones en orden', price: fmt(TR.TRANSIT.cable.vehCost), tool: { type: 'line', st: 'cable' } },
+  { id: 'roads', icon: '🛣️', label: 'Vías', groups: [
+    { title: 'Locales · 12 m', items: ['tierra', 'peatonal', 'calle', 'calle1', 'calle3'].map(roadItem) },
+    { title: 'Arterias · 24-36 m', items: ['avenida', 'avenida6', 'bulevar'].map(roadItem) },
+    { title: 'Troncales y autopistas', items: ['troncal', 'autopista'].map(roadItem) },
   ] },
+  { id: 'zones', icon: '🏘️', label: 'Zonas', groups: [
+    { title: 'Residencial', items: zoneItems('r') },
+    { title: 'Comercial', items: zoneItems('c') },
+    { title: 'Oficinas', items: zoneItems('o') },
+    { title: 'Industrial', items: zoneItems('i') },
+  ] },
+  { id: 'services', icon: '🏛️', label: 'Servicios', groups: [
+    { title: 'Seguridad y emergencias', items: ['cai', 'bomberos'].map(pubItem) },
+    { title: 'Salud', items: ['clinica', 'hospital'].map(pubItem) },
+    { title: 'Educación', items: ['escuela', 'universidad'].map(pubItem) },
+    { title: 'Recreación', items: ['parque', 'cancha', 'estadio'].map(pubItem) },
+    { title: 'Cultura', items: ['plaza', 'biblioteca'].map(pubItem) },
+    { title: 'Abastecimiento', items: ['mercado'].map(pubItem) },
+  ] },
+  { id: 'transit', icon: '🚌', label: 'Transporte', groups: [
+    { title: 'Paradas', items: [
+      { icon: '🚏', name: 'Paradero de bus', sub: 'Sobre calle, avenida o troncal', price: fmt(TR.TRANSIT.bus.stopCost), tool: { type: 'stop', st: 'bus' } },
+      { icon: '🚠', name: 'Estación Metrocable', sub: 'En un lote libre; ideal en laderas', price: fmt(TR.TRANSIT.cable.stopCost), tool: { type: 'stop', st: 'cable' } },
+    ] },
+    { title: 'Líneas', items: [
+      { icon: '🚌', name: 'Línea de bus', sub: 'Une paraderos en orden', price: fmt(TR.TRANSIT.bus.vehCost), tool: { type: 'line', st: 'bus' } },
+      { icon: '🚡', name: 'Línea Metrocable', sub: 'Une estaciones en orden', price: fmt(TR.TRANSIT.cable.vehCost), tool: { type: 'line', st: 'cable' } },
+    ] },
+  ] },
+  { id: 'layers', icon: '🗺️', label: 'Capas', groups: [] },
 ];
+const ALL_ITEMS = CATEGORIES.flatMap((c) => c.groups.flatMap((g) => g.items));
 function zoneSub(Z) {
   if (Z.k === 'r') return ['', 'Casas', 'Edificios de 3-6 pisos', 'Torres (requiere avenida)'][Z.d];
-  if (Z.k === 'c') return ['', 'Tiendas y locales', 'Locales y oficinas', 'Centros comerciales y torres'][Z.d];
+  if (Z.k === 'c') return ['', 'Tiendas y locales', 'Locales y plazoletas', 'Centros comerciales y hoteles'][Z.d];
+  if (Z.k === 'o') return ['', 'Casas de oficinas', 'Edificios de oficinas', 'Torres empresariales'][Z.d];
   return ['', 'Talleres, flores, ladrilleras', 'Bodegas y fábricas', 'Plantas y logística'][Z.d];
 }
 const OVERLAYS = [
@@ -63,41 +89,72 @@ export function toast(msg, kind = '') {
   setTimeout(() => el.remove(), 3400);
 }
 
+let currentCat = 'roads';
 function buildToolbar() {
   const host = $('#tools');
-  host.innerHTML = '';
-  for (const sec of SECTIONS) {
-    const d = document.createElement('div');
-    d.className = 'sec';
-    d.innerHTML = `<h4><span>${sec.title}</span><span>▾</span></h4><div class="items"></div>`;
-    d.querySelector('h4').onclick = () => d.classList.toggle('closed');
-    const items = d.querySelector('.items');
-    for (const it of sec.items) {
-      const b = document.createElement('button');
-      b.className = 'tb';
-      b.dataset.tool = JSON.stringify(it.tool);
-      b.title = it.sub || '';
-      b.innerHTML = `${it.swatch ? `<span class="sw" style="background:${it.swatch}"></span>` : `<span class="ic">${it.icon}</span>`}
-        <span class="nm">${it.name}<small>${it.sub || ''}</small></span><span class="pr">${it.price || ''}</span>`;
-      b.onclick = () => setTool(it.tool);
-      items.appendChild(b);
-    }
-    host.appendChild(d);
-  }
-  // capas
-  const d = document.createElement('div');
-  d.className = 'sec';
-  d.innerHTML = '<h4><span>Capas de información</span><span>▾</span></h4><div class="items ovl"></div>';
-  d.querySelector('h4').onclick = () => d.classList.toggle('closed');
-  for (const [k, name] of OVERLAYS) {
+  host.innerHTML = '<nav class="cats"></nav><div class="catpanel"></div>';
+  const nav = host.querySelector('.cats');
+  for (const c of CATEGORIES) {
     const b = document.createElement('button');
-    b.className = 'tb ovb' + (G.overlay === k ? ' on' : '');
-    b.dataset.ovl = k || '';
-    b.innerHTML = `<span class="ic">${k === 'lv' ? '💎' : k === 'svc' ? '🏥' : k === 'poll' ? '🏭' : k === 'slope' ? '⛰️' : '🚫'}</span><span class="nm">${name}</span><span></span>`;
-    b.onclick = () => setOverlay(k);
-    d.querySelector('.items').appendChild(b);
+    b.className = 'cat';
+    b.dataset.cat = c.id;
+    b.innerHTML = `<span class="ic">${c.icon}</span><span>${c.label}</span>`;
+    b.onclick = () => showCategory(c.id);
+    nav.appendChild(b);
   }
-  host.appendChild(d);
+  showCategory(currentCat);
+}
+
+function showCategory(id) {
+  currentCat = id;
+  document.querySelectorAll('.cat').forEach((b) => b.classList.toggle('on', b.dataset.cat === id));
+  const panel = $('#tools .catpanel');
+  panel.innerHTML = '';
+  const cat = CATEGORIES.find((c) => c.id === id);
+  const groups = id === 'layers'
+    ? [{ title: 'Capas de información', layers: true }]
+    : cat.groups;
+  for (const g of groups) {
+    const sec = document.createElement('section');
+    sec.className = 'grp';
+    sec.innerHTML = `<h4>${g.title}</h4><div class="cards${id === 'zones' ? ' three' : ''}"></div>`;
+    const cards = sec.querySelector('.cards');
+    if (g.layers) {
+      for (const [k, name] of OVERLAYS) {
+        const b = document.createElement('button');
+        b.className = 'card-it ovb' + (G.overlay === k ? ' on' : '');
+        b.dataset.ovl = k || '';
+        b.innerHTML = `<span class="ic">${k === 'lv' ? '💎' : k === 'svc' ? '🏥' : k === 'poll' ? '🏭' : k === 'slope' ? '⛰️' : '🚫'}</span><span class="nm">${name}</span>`;
+        b.onclick = () => setOverlay(k);
+        cards.appendChild(b);
+      }
+    } else {
+      for (const it of g.items) {
+        const b = document.createElement('button');
+        b.className = 'card-it tb';
+        b.dataset.tool = JSON.stringify(it.tool);
+        b.title = it.sub || '';
+        b.innerHTML = `${it.swatch ? `<span class="sw" style="background:${it.swatch}"></span>` : `<span class="ic">${it.icon}</span>`}
+          <span class="nm">${it.name}</span>${it.price ? `<span class="pr">${it.price}</span>` : ''}`;
+        b.onclick = () => setTool(it.tool);
+        b.classList.toggle('on', sameTool(it.tool, UI.tool));
+        cards.appendChild(b);
+      }
+    }
+    panel.appendChild(sec);
+  }
+  // descripción del elemento activo
+  const info = document.createElement('p');
+  info.className = 'hint catinfo';
+  panel.appendChild(info);
+  updateCatInfo();
+}
+
+function updateCatInfo() {
+  const el = $('#tools .catinfo');
+  if (!el) return;
+  const it = ALL_ITEMS.find((i) => sameTool(i.tool, UI.tool));
+  el.textContent = it ? `${it.name}: ${it.sub || ''}` : 'Elige una herramienta. Pasa el cursor sobre un botón para ver su descripción.';
 }
 
 export function setOverlay(k) {
@@ -119,6 +176,7 @@ export function setTool(t) {
   UI.tool = t;
   UI.drag = null;
   document.querySelectorAll('.tb[data-tool]').forEach((b) => b.classList.toggle('on', sameTool(JSON.parse(b.dataset.tool), t)));
+  updateCatInfo();
   S.grid.visible = t.type !== 'inspect';
   S.canvas.style.cursor = t.type === 'inspect' ? 'grab' : 'crosshair';
   setPreview([]);
@@ -274,6 +332,9 @@ const keys = new Set();
 function bindInput() {
   const cv = S.canvas;
   cv.addEventListener('contextmenu', (e) => e.preventDefault());
+  // evita el desplazamiento automático del navegador al presionar la rueda
+  cv.addEventListener('mousedown', (e) => { if (e.button === 1) e.preventDefault(); });
+  cv.addEventListener('auxclick', (e) => e.preventDefault());
   // el juego puede estar dentro de un marco (visor de artifacts): al tocar el mapa toma el foco del teclado
   cv.tabIndex = 0;
   cv.addEventListener('pointerdown', () => { cv.focus({ preventScroll: true }); window.focus(); });
@@ -282,8 +343,9 @@ function bindInput() {
     const t = pickTile(e.clientX, e.clientY);
     const d = { x0: e.clientX, y0: e.clientY, lx: e.clientX, ly: e.clientY, moved: false, button: e.button, start: t };
     UI.drag = null;
-    if (e.button === 2) d.mode = 'orbit';
-    else if (e.button === 1 || e.shiftKey) d.mode = 'pan';
+    // botón de la rueda: girar e inclinar · clic derecho o Shift: desplazar
+    if (e.button === 1) { d.mode = 'orbit'; e.preventDefault(); }
+    else if (e.button === 2 || e.shiftKey) d.mode = 'pan';
     else if (['road', 'zone', 'bulldoze'].includes(UI.tool.type) && t) { d.mode = 'build'; UI.drag = { start: { x: t.x, y: t.y } }; }
     else d.mode = 'click';
     UI.pd = d;
@@ -346,7 +408,7 @@ function bindInput() {
     else if (k === 'g') S.grid.visible = !S.grid.visible;
     else if (k === 'n') toggleCycle();
     else if (k >= '1' && k <= '9' && !e.ctrlKey) setTool({ type: 'zone', z: +k });
-    else for (const sec of SECTIONS) for (const it of sec.items) if (it.key === k && !e.ctrlKey && !e.metaKey) setTool(it.tool);
+    else for (const it of ALL_ITEMS) if (it.key === k && !e.ctrlKey && !e.metaKey) setTool(it.tool);
   });
   window.addEventListener('keyup', (e) => keys.delete(e.key.toLowerCase()));
   window.addEventListener('blur', () => keys.clear());
@@ -401,6 +463,7 @@ function bldTitle(b) {
   const name = buildingLabel(b);
   if (b.kind === 'ind') return `<b>🏭 ${name}</b><br>Densidad ${DENS_NAME[b.d].toLowerCase()} · ${b.jobs} empleos`;
   if (b.kind === 'com') return `<b>🏪 ${name}</b><br>Comercio ${TIER_NAME[tierOf(b.e)]} · ${b.jobs} empleos`;
+  if (b.kind === 'off') return `<b>🏢 ${name}</b><br>Oficinas · categoría ${TIER_NAME[tierOf(b.e)]} · ${b.jobs} empleos`;
   return `<b>${name}</b><br><span class="estr" style="background:${ESTRATO_COLORS[b.e - 1]}">Estrato ${b.e}</span> · densidad ${DENS_NAME[b.d].toLowerCase()} · ${b.pop} hab.`;
 }
 
@@ -428,7 +491,7 @@ export function renderCity() {
   const st = G.stats;
   const tot = Math.max(1, st.pop);
   let html = '<h3>Demanda</h3>';
-  html += dbar('Residencial', G.dem.r, '#45b956') + dbar('Comercial', G.dem.c, '#3d8bfd') + dbar('Industrial', G.dem.i, '#f7d117');
+  html += dbar('Residencial', G.dem.r, '#45b956') + dbar('Comercial', G.dem.c, '#3d8bfd') + dbar('Oficinas', G.dem.o, '#a066e8') + dbar('Industrial', G.dem.i, '#f7d117');
   html += '<h3>Población por estrato</h3>';
   ESTRATO_COLORS.forEach((c, i) => { html += bar(`Estrato ${i + 1}`, (st.byE[i] / tot) * 100, c, st.byE[i].toLocaleString('es-CO')); });
   html += '<h3>Por densidad</h3>';
@@ -445,7 +508,7 @@ export function renderCity() {
   }
   html += `<h3>Empleo e industria</h3>
     <div class="kv"><span>Trabajadores / empleos</span><b>${Math.round(st.workers).toLocaleString('es-CO')} / ${st.jobs.toLocaleString('es-CO')}</b></div>
-    <div class="kv"><span>· comercio · industria · público</span><span>${st.comJobs} · ${st.indJobs} · ${st.pubJobs}</span></div>
+    <div class="kv"><span>· comercio · oficinas · industria · público</span><span>${st.comJobs} · ${st.offJobs || 0} · ${st.indJobs} · ${st.pubJobs}</span></div>
     <div class="kv"><span>Bienes producidos / consumidos</span><b>${Math.round(st.goodsProd)} / ${Math.round(st.goodsNeed)}</b></div>`;
   const b = st.budget || {};
   const m = (v) => fmt((v || 0) * 10);
@@ -453,6 +516,7 @@ export function renderCity() {
   html += `<h3>Presupuesto (por mes)</h3>
     <div class="kv"><span>Impuesto residencial</span><span class="${(b.resTax || 0) >= 0 ? 'pos' : 'neg'}">${m(b.resTax)}</span></div>
     <div class="kv"><span>Comercio</span><span class="pos">${m(b.comTax)}</span></div>
+    <div class="kv"><span>Oficinas</span><span class="pos">${m(b.offTax)}</span></div>
     <div class="kv"><span>Industria</span><span class="pos">${m(b.indTax)}</span></div>
     <div class="kv"><span>Exportaciones</span><span class="pos">${m(b.exports)}</span></div>
     <div class="kv"><span>Pasajes de transporte</span><span class="pos">${m(b.transitRev)}</span></div>
@@ -499,6 +563,12 @@ export function renderInfo() {
         <div class="kv"><span>Radio</span><b>${d.radius} casillas (${u2m(d.radius)} m)</b></div>
         <div class="kv"><span>Empleos</span><b>${d.jobs}</b></div>
         <div class="kv"><span>Mantenimiento</span><b>${fmt(d.upkeep * 10)}/mes</b></div>`;
+    } else if (b.kind === 'off') {
+      html = `<h3>🏢 ${buildingLabel(b)}</h3>
+        <div class="kv"><span>Categoría</span><b>Oficinas ${TIER_NAME[tierOf(b.e)]}</b></div>
+        <div class="kv"><span>Densidad</span><b>${DENS_NAME[b.d]}</b></div>
+        <div class="kv"><span>Empleos</span><b>${b.jobs}</b></div>
+        <p class="hint">Las oficinas dan empleo formal, no contaminan ni consumen bienes y crecen donde vive población de estratos 3 a 6.</p>` + lvBlock(b.x, b.y);
     } else if (b.kind === 'com') {
       html = `<h3>🏪 ${buildingLabel(b)}</h3>
         <div class="kv"><span>Categoría</span><b>Comercio ${TIER_NAME[tierOf(b.e)]}</b></div>
@@ -578,7 +648,7 @@ export function updateTop() {
   $('#sFace').textContent = st.happy > 75 ? '😄' : st.happy > 55 ? '🙂' : st.happy > 35 ? '😐' : '😠';
   $('#sEmp').textContent = Math.round(st.emp * 100) + '%';
   $('#sDate').textContent = `${MONTHS[G.month % 12]} · año ${Math.floor(G.month / 12) + 1}`;
-  for (const k of ['r', 'c', 'i']) {
+  for (const k of ['r', 'c', 'o', 'i']) {
     const v = G.dem[k];
     const el = $('#d' + k);
     el.style.height = Math.abs(v) * 50 + '%';

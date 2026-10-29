@@ -274,8 +274,8 @@ export const COM_TYPES = {
 
 const TABLE = {
   1: { 1: [['tiendaBarrio', 1]], 2: [['tiendaBarrio', 0.45], ['panaderia', 0.55]], 3: [['cafe', 0.65], ['panaderia', 0.35]] },
-  2: { 1: [['locales', 1]], 2: [['locales', 0.4], ['plazoleta', 0.4], ['oficinas', 0.2]], 3: [['oficinas', 0.6], ['plazoleta', 0.4]] },
-  3: { 1: [['sanandresito', 1]], 2: [['centroComercial', 0.6], ['hotel', 0.4]], 3: [['torreOficinas', 0.6], ['hotel', 0.2], ['centroComercial', 0.2]] },
+  2: { 1: [['locales', 1]], 2: [['locales', 0.5], ['plazoleta', 0.5]], 3: [['plazoleta', 0.5], ['locales', 0.5]] },
+  3: { 1: [['sanandresito', 1]], 2: [['centroComercial', 0.6], ['hotel', 0.4]], 3: [['centroComercial', 0.55], ['hotel', 0.45]] },
 };
 // modelos basados en las fotos de referencia
 Object.assign(COM_TYPES, REF_COM);

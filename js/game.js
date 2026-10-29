@@ -14,6 +14,7 @@ import { buildModel, VARIANTS, typeName } from './models.js';
 import { pickResType, resPop } from './models_res.js';
 import { pickComType, COM_JOBS, COM_TYPES, tierOf } from './models_com.js';
 import { pickIndType, IND_JOBS, IND_TYPES } from './models_ind.js';
+import { pickOffType, OFF_JOBS, OFF_TYPES } from './models_off.js';
 import { PUBLIC, SERVICES, buildPublic } from './buildings.js';
 
 export const COST = { zone: 500, startMoney: 6_000_000 };
@@ -27,10 +28,14 @@ export const ZONES = {
   7: { k: 'i', d: 1, name: 'Industrial · baja', color: '#fff27a' },
   8: { k: 'i', d: 2, name: 'Industrial · media', color: '#f7d117' },
   9: { k: 'i', d: 3, name: 'Industrial · alta', color: '#d1ad00' },
+  10: { k: 'o', d: 1, name: 'Oficinas · baja', color: '#d9c2f7' },
+  11: { k: 'o', d: 2, name: 'Oficinas · media', color: '#a066e8' },
+  12: { k: 'o', d: 3, name: 'Oficinas · alta', color: '#6b2fc4' },
 };
 export const DENS_NAME = ['', 'Baja', 'Media', 'Alta'];
 export const ESTRATO_COLORS = ['#e5484d', '#f08a24', '#f2d024', '#6cc04a', '#2f9bd6', '#9b5de5'];
-export const MAX_SLOPE = { 1: 0.75, 2: 0.55, 3: 0.45 };
+// pendiente máxima del lote (desnivel / 12 m) por densidad: 35 %, 25 % y 18 %
+export const MAX_SLOPE = { 1: 0.35, 2: 0.25, 3: 0.18 };
 const TAX = [-3, 4, 8, 18, 35, 60];
 const DMULT = { 1: 2.2, 2: 1.2, 3: 1 };
 const TIER_MULT = { 1: 1, 2: 1.3, 3: 1.7 };
@@ -40,7 +45,7 @@ export const MONTHS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', '
 
 const emptyStats = () => ({
   pop: 0, jobs: 0, workers: 0, emp: 1, happy: 50, income: 0, expense: 0,
-  byE: [0, 0, 0, 0, 0, 0], byD: [0, 0, 0], bldCount: 0, comJobs: 0, indJobs: 0, pubJobs: 0,
+  byE: [0, 0, 0, 0, 0, 0], byD: [0, 0, 0], bldCount: 0, comJobs: 0, indJobs: 0, offJobs: 0, pubJobs: 0,
   goodsNeed: 0, goodsProd: 0, budget: {},
 });
 
@@ -60,7 +65,7 @@ export const G = {
   poll: new Float32Array(N * N),
   access: new Uint8Array(N * N), // densidad máxima permitida por la vía de frente (0 = sin acceso)
   face: new Int8Array(N * N), // dirección hacia la vía
-  dem: { r: 0.4, c: 0, i: 0 },
+  dem: { r: 0.4, c: 0, i: 0, o: 0 },
   stats: emptyStats(),
   hooks: {
     roadsChanged() {}, removeStop() {}, transitCover: () => [], transitEconomy: () => ({ revenue: 0, upkeep: 0 }),
@@ -249,7 +254,7 @@ function recomputePollution() {
 function recomputeLandValue() {
   const com = new Float32Array(N * N);
   for (const b of G.buildings) {
-    if (b.kind !== 'com') continue;
+    if (b.kind !== 'com' && b.kind !== 'off') continue;
     for (let y = Math.max(0, b.y - 4); y <= Math.min(N - 1, b.y + 4); y++)
       for (let x = Math.max(0, b.x - 4); x <= Math.min(N - 1, b.x + 4); x++) com[idx(x, y)] += 0.012 * b.d;
   }
@@ -305,6 +310,7 @@ function recalc(b) {
   b.pop = 0; b.jobs = 0;
   if (b.kind === 'res') b.pop = resPop(b.d, b.e, b.type);
   else if (b.kind === 'com') b.jobs = Math.round(COM_JOBS[b.d] * (COM_TYPES[b.type]?.jobs ?? 1));
+  else if (b.kind === 'off') b.jobs = Math.round(OFF_JOBS[b.d] * (OFF_TYPES[b.type]?.jobs ?? 1));
   else if (b.kind === 'ind') b.jobs = Math.round(IND_JOBS[b.d] * (IND_TYPES[b.type]?.jobs ?? 1));
   else b.jobs = PUBLIC[b.key].jobs;
 }
@@ -329,7 +335,7 @@ export function removeBuilding(b) {
   detach(b);
   const k = G.buildings.indexOf(b);
   if (k >= 0) G.buildings.splice(k, 1);
-  if (b.kind === 'ind' || b.kind === 'com') G.dirty.pollLv = true;
+  if (b.kind === 'ind' || b.kind === 'com' || b.kind === 'off') G.dirty.pollLv = true;
   if (b.kind === 'pub') markDirty('cov');
 }
 
@@ -337,6 +343,7 @@ function restyle(b, e) {
   b.e = e;
   if (b.kind === 'res') b.type = pickResType(b.d, e, rand);
   else if (b.kind === 'com') b.type = pickComType(b.d, e, rand);
+  else if (b.kind === 'off') b.type = pickOffType(b.d, e, rand);
   recalc(b);
   detach(b);
   attach(b);
@@ -469,8 +476,8 @@ export function zoneProblem(x, y, ignoreDemand = false) {
   if (!a) return 'Sin vía cercana';
   if (a < Z.d) return Z.d === 3 ? 'Alta densidad requiere avenida o troncal al frente' : 'Densidad media requiere una calle (no destapada) al frente';
   const s = padOf(x, y).slope;
-  if (s > MAX_SLOPE[Z.d] + (Z.k === 'r' && Z.d === 1 ? 0.25 : 0)) return 'Terreno muy inclinado para esta densidad';
-  if (!ignoreDemand && G.dem[Z.k] < -0.2) return 'Poca demanda de ' + (Z.k === 'r' ? 'vivienda' : Z.k === 'c' ? 'comercio' : 'industria');
+  if (s > MAX_SLOPE[Z.d] + (Z.k === 'r' && Z.d === 1 ? 0.1 : 0)) return 'Terreno muy inclinado para esta densidad';
+  if (!ignoreDemand && G.dem[Z.k] < -0.2) return 'Poca demanda de ' + ({ r: 'vivienda', c: 'comercio', o: 'oficinas', i: 'industria' }[Z.k]);
   return null;
 }
 
@@ -507,7 +514,7 @@ export function canPlacePublic(key, x, y) {
   for (let j = 0; j < d.h; j++) { if (isRoad(x - 1, y + j)) sides[3]++; if (isRoad(x + d.w, y + j)) sides[1]++; }
   const best = sides.indexOf(Math.max(...sides));
   const noRoad = sides[best] === 0;
-  const steep = padOf(x, y, d.w, d.h).slope > 1.0;
+  const steep = padOf(x, y, d.w, d.h).slope > 0.35;
   if (noRoad || steep) { ok = false; tiles.forEach((t) => { t.ok = false; }); }
   return { ok, tiles, noRoad, steep, rot: best };
 }
@@ -572,6 +579,9 @@ function spawn(t) {
     let e = estratoOf(G.lv[i]);
     if (e > 1 && rand() < 0.2) e--;
     addBuilding({ ...base, kind: 'res', e, type: pickResType(Z.d, e, rand) });
+  } else if (Z.k === 'o') {
+    const e = estratoOf(G.lv[i]);
+    addBuilding({ ...base, kind: 'off', e, type: pickOffType(Z.d, e, rand) });
   } else if (Z.k === 'c') {
     const e = estratoOf(G.lv[i]);
     addBuilding({ ...base, kind: 'com', e, type: pickComType(Z.d, e, rand) });
@@ -584,14 +594,16 @@ function simulate() {
   if (G.dirty.pollLv || G.ticks % 5 === 0) { recomputePollution(); recomputeLandValue(); G.dirty.pollLv = false; if (G.overlay) refreshOverlay(); }
 
   // --- totales y demanda ---
-  let pop = 0, comJobs = 0, indJobs = 0, pubJobs = 0;
+  let pop = 0, comJobs = 0, indJobs = 0, offJobs = 0, pubJobs = 0, educated = 0;
   for (const b of G.buildings) {
     pop += b.pop;
     if (b.kind === 'com') comJobs += b.jobs;
+    else if (b.kind === 'off') offJobs += b.jobs;
+    if (b.kind === 'res' && b.e >= 3) educated += b.pop;
     else if (b.kind === 'ind') indJobs += b.jobs;
     else if (b.kind === 'pub') pubJobs += b.jobs;
   }
-  const jobs = comJobs + indJobs + pubJobs;
+  const jobs = comJobs + indJobs + offJobs + pubJobs;
   const workers = pop * 0.5;
   const emp = workers > 0 ? Math.min(1, jobs / workers) : 1;
   const unemp = workers > 0 ? Math.max(0, 1 - jobs / workers) : 0;
@@ -599,6 +611,8 @@ function simulate() {
   const goodsProd = indJobs * 0.9;
   G.dem.r = clamp(0.35 + (jobs - workers) / Math.max(30, workers * 0.5) + (st.happy - 50) / 150, -1, 1);
   G.dem.c = clamp((pop * 0.12 - comJobs) / Math.max(25, comJobs * 0.6 + 25), -1, 1);
+  // oficinas: crecen con la población, sobre todo la de estratos 3-6 (más educación formal)
+  G.dem.o = clamp((pop * 0.04 + educated * 0.1 - offJobs) / Math.max(30, offJobs * 0.6 + 30), -1, 1);
   G.dem.i = clamp((goodsNeed - goodsProd) / Math.max(25, goodsNeed) + unemp * 1.2 - 0.1, -1, 1);
 
   // --- crecimiento ---
@@ -619,7 +633,7 @@ function simulate() {
   if (spawned) { markDirty('zones'); G.dirty.pollLv = true; }
 
   // --- evolución del estrato según el valor del suelo ---
-  const priv = G.buildings.filter((b) => b.kind === 'res' || b.kind === 'com');
+  const priv = G.buildings.filter((b) => b.kind === 'res' || b.kind === 'com' || b.kind === 'off');
   const K = Math.min(priv.length, 4 + Math.floor(priv.length / 40));
   for (let k = 0; k < K; k++) {
     const b = priv[Math.floor(rand() * priv.length)];
@@ -631,7 +645,7 @@ function simulate() {
 
   // --- economía ---
   const goodsRatio = goodsNeed > 0 ? Math.min(1, goodsProd / goodsNeed) : 1;
-  const bud = { resTax: 0, comTax: 0, indTax: 0, exports: 0, imports: 0, services: 0, roads: 0, transitRev: 0, transitCost: 0 };
+  const bud = { resTax: 0, comTax: 0, offTax: 0, indTax: 0, exports: 0, imports: 0, services: 0, roads: 0, transitRev: 0, transitCost: 0 };
   let hw = 0, hs = 0;
   const byE = [0, 0, 0, 0, 0, 0], byD = [0, 0, 0];
   for (const b of G.buildings) {
@@ -643,7 +657,8 @@ function simulate() {
       for (const c of G.cov) sc += c[i];
       const h = clamp(28 + 7 * sc + (emp - 0.75) * 30 - G.poll[i] * 35, 3, 100);
       hw += h * b.pop; hs += b.pop;
-    } else if (b.kind === 'com') bud.comTax += b.jobs * 16 * TIER_MULT[tierOf(b.e)] * (0.5 + 0.5 * goodsRatio) * (0.6 + 0.4 * clamp(G.dem.c + 1, 0, 1));
+    } else if (b.kind === 'off') bud.offTax += b.jobs * 26 * TIER_MULT[tierOf(b.e)];
+    else if (b.kind === 'com') bud.comTax += b.jobs * 16 * TIER_MULT[tierOf(b.e)] * (0.5 + 0.5 * goodsRatio) * (0.6 + 0.4 * clamp(G.dem.c + 1, 0, 1));
     else if (b.kind === 'ind') bud.indTax += b.jobs * 14;
     else bud.services += PUBLIC[b.key].upkeep;
   }
@@ -652,12 +667,12 @@ function simulate() {
   for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) { const r = G.grid[y][x].road; if (r) bud.roads += ROADS[r.k].upkeep; }
   const tr = G.hooks.transitEconomy();
   bud.transitRev = tr.revenue; bud.transitCost = tr.upkeep;
-  const income = bud.resTax + bud.comTax + bud.indTax + bud.exports + bud.transitRev;
+  const income = bud.resTax + bud.comTax + bud.offTax + bud.indTax + bud.exports + bud.transitRev;
   const expense = bud.imports + bud.services + bud.roads + bud.transitCost;
   G.money += income - expense;
   Object.assign(st, {
     pop, jobs, workers, emp, happy: hs ? hw / hs : 50, income, expense, byE, byD, bldCount: G.buildings.length,
-    comJobs, indJobs, pubJobs, goodsNeed, goodsProd, budget: bud,
+    comJobs, indJobs, offJobs, pubJobs, goodsNeed, goodsProd, budget: bud,
   });
   if (G.ticks % 10 === 0) G.month++;
   if (spawned || G.ticks % 5 === 0) G.onChange();
@@ -714,7 +729,7 @@ export function clearAll() {
   applyCornerLevels(new Map());
   G.growing.length = 0;
   G.month = 0; G.ticks = 0; G.acc = 0;
-  G.dem = { r: 0.4, c: 0, i: 0 };
+  G.dem = { r: 0.4, c: 0, i: 0, o: 0 };
   G.stats = emptyStats();
   rand = rng(Date.now() & 0xffffff);
   markDirty('all');

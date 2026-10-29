@@ -3,6 +3,7 @@ import { Builder } from './geom.js';
 import { RES_TYPES } from './models_res.js';
 import { COM_TYPES } from './models_com.js';
 import { IND_TYPES } from './models_ind.js';
+import { OFF_TYPES } from './models_off.js';
 import { PUBLIC, buildPublic } from './buildings.js';
 
 export const VARIANTS = 4; // variantes por combinación (paletas/disposición)
@@ -21,7 +22,7 @@ export function buildModel(spec) {
   if (cache.has(key)) return cache.get(key);
   if (spec.kind === 'pub') { const g = buildPublic(spec.type); cache.set(key, g); return g; }
   const B = new Builder(hash(key));
-  const T = spec.kind === 'res' ? RES_TYPES : spec.kind === 'com' ? COM_TYPES : IND_TYPES;
+  const T = spec.kind === 'res' ? RES_TYPES : spec.kind === 'com' ? COM_TYPES : spec.kind === 'off' ? OFF_TYPES : IND_TYPES;
   T[spec.type].fn(B, spec.e || 1, spec);
   const g = B.build();
   g.userData.key = key;
@@ -30,7 +31,7 @@ export function buildModel(spec) {
 }
 
 export function typeName(kind, type) {
-  const T = kind === 'res' ? RES_TYPES : kind === 'com' ? COM_TYPES : IND_TYPES;
+  const T = kind === 'res' ? RES_TYPES : kind === 'com' ? COM_TYPES : kind === 'off' ? OFF_TYPES : IND_TYPES;
   return T[type]?.name || type;
 }
 
@@ -54,7 +55,8 @@ export const MODEL_SETS = {
   ref: () => [
     ...[['hileraLadrillo', 3], ['visPareadas', 2], ['casaModernaLadrillo', 3], ['casaColonialBlanca', 4], ['casaInglesa', 4], ['casaLadrilloVidrio', 6],
       ['bloqueLadrillo', 4], ['edificioMiradores', 5], ['bloqueLadrilloAlto', 4], ['torreLadrillo', 5], ['torreCurva', 6]].map(([t, e]) => ({ kind: 'res', type: t, e, v: 0, label: `${t} E${e}` })),
-    { kind: 'com', type: 'torreCorona', e: 6, v: 0, label: 'torreCorona' }, { kind: 'com', type: 'torreEsbelta', e: 6, v: 0, label: 'torreEsbelta' },
+    { kind: 'off', type: 'torreCorona', e: 6, v: 0, label: 'torreCorona' }, { kind: 'off', type: 'torreEsbelta', e: 6, v: 0, label: 'torreEsbelta' },
+    { kind: 'off', type: 'casaOficinas', e: 4, v: 0, label: 'casaOficinas' }, { kind: 'off', type: 'centroEmpresarial', e: 5, v: 0, label: 'centroEmpresarial' },
     { kind: 'ind', type: 'bodegasBoveda', e: 3, v: 0, label: 'bodegasBoveda' },
   ],
   pub: () => Object.keys(PUBLIC).map((t) => ({ kind: 'pub', type: t, w: PUBLIC[t].w, label: PUBLIC[t].name })),

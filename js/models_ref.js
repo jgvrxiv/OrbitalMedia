@@ -430,7 +430,8 @@ export const REF_RES_TABLE = {
     6: [['torreCurva', 0.35]],
   },
 };
-export const REF_COM_TABLE = { 3: { 3: [['torreCorona', 0.3], ['torreEsbelta', 0.25]] } };
+// las torres de oficinas se usan en la zona de oficinas (models_off.js)
+export const REF_COM_TABLE = {};
 export const REF_IND_TABLE = { 2: [['bodegasBoveda', 0.35]], 3: [['bodegasBoveda', 0.15]] };
 
 void tank; void pots; void fence;

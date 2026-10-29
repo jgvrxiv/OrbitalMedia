@@ -37,7 +37,7 @@ export function stopOk(type, x, y) {
   const t = tile(x, y);
   if (!t || t.stop) return false;
   if (type === 'bus') return busRoad(t.road) && t.road.k !== 'autopista';
-  return !t.road && !t.bld && padOf(x, y).slope < 0.9;
+  return !t.road && !t.bld && padOf(x, y).slope < 0.45;
 }
 
 function stopBase(s) {
@@ -341,7 +341,7 @@ export function economy() {
     const ids = new Set();
     let dem = 0;
     for (const b of G.buildings) {
-      if ((b.kind !== 'res' && b.kind !== 'com') || ids.has(b.id)) continue;
+      if ((b.kind !== 'res' && b.kind !== 'com' && b.kind !== 'off') || ids.has(b.id)) continue;
       for (const s of line.stops) {
         if (Math.hypot(b.x - s.x, b.y - s.y) <= 5) { ids.add(b.id); dem += b.pop + b.jobs * 0.5; break; }
       }

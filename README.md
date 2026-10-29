@@ -16,8 +16,8 @@ Luego visita http://localhost:8000. El botón **🏙️ Ejemplo** genera una ciu
 
 ### Cómo funciona
 
-- **Zonas por uso y densidad** (como en otros city builders): residencial (verde), comercial (azul) e
-  industrial (amarillo), cada una en densidad **baja, media o alta** (teclas 1-9).
+- **Zonas por uso y densidad** (como en otros city builders): residencial (verde), comercial (azul),
+  oficinas (morado) e industrial (amarillo), cada una en densidad **baja, media o alta** (teclas 1-9).
 - **El estrato (1-6) no se elige**: sale del **valor del suelo** de cada lote, que depende de los servicios
   cercanos, el tipo de vía, el comercio cercano y la contaminación. Un barrio nuevo puede nacer en estrato
   1 o en estrato 5 según las condiciones, y los edificios suben o bajan de estrato con el tiempo.
@@ -48,7 +48,7 @@ Luego visita http://localhost:8000. El botón **🏙️ Ejemplo** genera una ciu
 
 ### Controles
 
-Clic derecho + arrastrar = girar e inclinar · rueda o Z/X = zoom · WASD/flechas o arrastrar con *Inspeccionar* = mover
+Presionar la rueda + arrastrar = girar e inclinar · girar la rueda o Z/X = zoom · clic derecho + arrastrar = desplazar · WASD/flechas o arrastrar con *Inspeccionar* = mover
 (Shift = rápido) · Q/E = girar 360° · R/F = inclinar · Espacio = pausa · N = día/noche · G = cuadrícula · 1-9 = zonas · Esc = cancelar ·
 Enter = terminar línea.
 

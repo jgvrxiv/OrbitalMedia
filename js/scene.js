@@ -42,7 +42,7 @@ const sstep = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a)
 // Altura analítica del terreno en coordenadas de mundo.
 export function terrainFn(x, z) {
   x /= K; z /= K;
-  return terrainBase(x, z) * (S.terrain === 'llano' ? 1 : 1.5);
+  return terrainBase(x, z) * (S.terrain === 'llano' ? 1 : 1.1);
 }
 function terrainBase(x, z) {
   if (S.terrain === 'llano') {
@@ -51,7 +51,7 @@ function terrainBase(x, z) {
   // Valle andino: fondo plano, laderas al oriente y occidente, colinas al norte y sur
   const ax = Math.abs(x + fbm(z * 0.03, 3.1) * 5), az = Math.abs(z);
   let h = 7.2 * sstep(9, 33, ax) + 2.6 * sstep(18, 42, az) + 5 * sstep(32, 60, Math.max(ax, az));
-  h += fbm(x * 0.07, z * 0.07) * (0.35 + 2.0 * sstep(5, 28, ax));
+  h += fbm(x * 0.05, z * 0.05) * (0.1 + 0.5 * sstep(5, 28, ax));
   return h;
 }
 

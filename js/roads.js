@@ -14,52 +14,52 @@ const P = (t, w, d = 0) => ({ t, w, d });
 export const ROADS = {
   tierra: {
     name: 'Camino destapado', icon: '🟫', cost: 2500, upkeep: 1, dens: 1, car: true, bus: false, truck: true, speed: 0.6,
-    lv: -0.05, rank: 0, maxSlope: 1.4, color: '#9b7d57', desc: 'Barato; sólo baja densidad y sin buses.',
+    lv: -0.05, rank: 0, maxSlope: 0.45, color: '#9b7d57', desc: 'Barato; sólo baja densidad y sin buses.',
     profile: [P('verge', 1.5), P('dirt', 9), P('verge', 1.5)],
   },
   peatonal: {
     name: 'Calle peatonal', icon: '🚶', cost: 9000, upkeep: 3, dens: 2, car: false, bus: false, truck: false, speed: 0,
-    lv: 0.06, rank: 1, maxSlope: 1.6, color: '#cdbfa3', desc: 'Sin carros; sube el valor del suelo. Hasta densidad media.',
+    lv: 0.06, rank: 1, maxSlope: 0.5, color: '#cdbfa3', desc: 'Sin carros; sube el valor del suelo. Hasta densidad media.',
     profile: [P('paver', 12)],
   },
   calle: {
     name: 'Calle', icon: '🛣️', cost: 8000, upkeep: 3, dens: 2, car: true, bus: true, truck: true, speed: 1,
-    lv: 0, rank: 2, maxSlope: 1.1, color: '#3d4147', desc: '2 carriles en doble sentido. Hasta densidad media.',
+    lv: 0, rank: 2, maxSlope: 0.3, color: '#3d4147', desc: '2 carriles en doble sentido. Hasta densidad media.',
     profile: [P('walk', 2.5), P('lane', 3.5, -1), P('lane', 3.5, 1), P('walk', 2.5)],
   },
   calle1: {
     name: 'Calle de un sentido', icon: '➡️', cost: 8500, upkeep: 3, dens: 2, car: true, bus: true, truck: true, speed: 1.15,
-    lv: 0, rank: 2.1, maxSlope: 1.1, color: '#3d4147', desc: '2 carriles en un solo sentido. Hasta densidad media.',
+    lv: 0, rank: 2.1, maxSlope: 0.3, color: '#3d4147', desc: '2 carriles en un solo sentido. Hasta densidad media.',
     profile: [P('walk', 2.5), P('lane', 3.5, 1), P('lane', 3.5, 1), P('walk', 2.5)],
   },
   calle3: {
     name: 'Calle de 3 carriles', icon: '🚗', cost: 10000, upkeep: 4, dens: 2, car: true, bus: true, truck: true, speed: 1.25,
-    lv: -0.01, rank: 2.5, maxSlope: 1.0, color: '#3b3f45', desc: '3 carriles con andenes angostos. Hasta densidad media.',
+    lv: -0.01, rank: 2.5, maxSlope: 0.28, color: '#3b3f45', desc: '3 carriles con andenes angostos. Hasta densidad media.',
     profile: [P('walk', 1.5), P('lane', 3, -1), P('lane', 3, 1), P('lane', 3, 1), P('walk', 1.5)],
   },
   avenida: {
     name: 'Avenida', icon: '🌴', cost: 15000, upkeep: 6, dens: 3, car: true, bus: true, truck: true, speed: 1.5,
-    lv: 0.03, rank: 3, maxSlope: 0.9, color: '#383c42', desc: '4 carriles con separador y palmas. Permite alta densidad.',
+    lv: 0.03, rank: 3, maxSlope: 0.22, color: '#383c42', desc: '4 carriles con separador y palmas. Permite alta densidad.',
     profile: [P('walk', 3), P('lane', 3.3, -1), P('lane', 3.3, -1), P('median', 4.8), P('lane', 3.3, 1), P('lane', 3.3, 1), P('walk', 3)],
   },
   avenida6: {
     name: 'Avenida de 6 carriles', icon: '🚙', cost: 17000, upkeep: 7, dens: 3, car: true, bus: true, truck: true, speed: 1.7,
-    lv: 0, rank: 3.2, maxSlope: 0.85, color: '#383c42', desc: '6 carriles con separador angosto. Permite alta densidad.',
+    lv: 0, rank: 3.2, maxSlope: 0.2, color: '#383c42', desc: '6 carriles con separador angosto. Permite alta densidad.',
     profile: [P('walk', 2), P('lane', 3.2, -1), P('lane', 3.2, -1), P('lane', 3.2, -1), P('sep', 0.8), P('lane', 3.2, 1), P('lane', 3.2, 1), P('lane', 3.2, 1), P('walk', 2)],
   },
   bulevar: {
     name: 'Bulevar con ciclorruta', icon: '🚲', cost: 24000, upkeep: 9, dens: 3, car: true, bus: true, truck: true, speed: 1.4,
-    lv: 0.07, rank: 3.5, maxSlope: 0.85, color: '#383c42', desc: 'Separador arborizado, ciclorrutas y andenes anchos. Sube el valor del suelo.',
+    lv: 0.07, rank: 3.5, maxSlope: 0.2, color: '#383c42', desc: 'Separador arborizado, ciclorrutas y andenes anchos. Sube el valor del suelo.',
     profile: [P('walk', 3), P('bike', 2), P('lane', 3.3, -1), P('lane', 3.3, -1), P('median', 6), P('lane', 3.3, 1), P('lane', 3.3, 1), P('bike', 2), P('walk', 3)],
   },
   troncal: {
     name: 'Troncal de buses', icon: '🚍', cost: 19000, upkeep: 8, dens: 3, car: true, bus: true, truck: true, speed: 1.5, busSpeed: 2.2,
-    lv: 0.02, rank: 4, maxSlope: 0.8, color: '#3a3e44', desc: 'Carriles exclusivos centrales (tipo BRT). Buses más rápidos.',
+    lv: 0.02, rank: 4, maxSlope: 0.15, color: '#3a3e44', desc: 'Carriles exclusivos centrales (tipo BRT). Buses más rápidos.',
     profile: [P('walk', 3), P('lane', 3.3, -1), P('lane', 3.3, -1), P('sep', 1), P('bus', 3.5, -1), P('median', 3), P('bus', 3.5, 1), P('sep', 1), P('lane', 3.3, 1), P('lane', 3.3, 1), P('walk', 3)],
   },
   autopista: {
     name: 'Autopista', icon: '🛤️', cost: 24000, upkeep: 10, dens: 0, car: true, bus: true, truck: true, speed: 2.4,
-    lv: -0.08, rank: 5, maxSlope: 0.7, color: '#2f3237', desc: 'Rápida, sin acceso a lotes; el ruido baja el valor del suelo.',
+    lv: -0.08, rank: 5, maxSlope: 0.12, color: '#2f3237', desc: 'Rápida, sin acceso a lotes; el ruido baja el valor del suelo.',
     profile: [P('bar', 0.5), P('shoulder', 1.5), P('lane', 3.5, -1), P('lane', 3.5, -1), P('bar', 1), P('lane', 3.5, 1), P('lane', 3.5, 1), P('shoulder', 1.5), P('bar', 0.5)],
   },
 };

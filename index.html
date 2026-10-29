@@ -17,7 +17,7 @@
     <div class="stat" title="Felicidad"><span id="sFace">🙂</span><b id="sHappy">50%</b></div>
     <div class="stat" title="Empleo (empleos / trabajadores)"><span>💼</span><b id="sEmp">100%</b></div>
     <div class="stat" title="Fecha"><span>📅</span><b id="sDate">ene · año 1</b></div>
-    <div class="stat rci" title="Demanda: Residencial · Comercial · Industrial"><span class="rb"><i id="dr"></i></span><span class="rb"><i id="dc"></i></span><span class="rb"><i id="di"></i></span><small>R C I</small></div>
+    <div class="stat rci" title="Demanda: Residencial · Comercial · Oficinas · Industrial"><span class="rb"><i id="dr"></i></span><span class="rb"><i id="dc"></i></span><span class="rb"><i id="do"></i></span><span class="rb"><i id="di"></i></span><small>R C O I</small></div>
     <button id="bCycle" class="stat clock" title="Ciclo día/noche (N)"><b id="sClock">☀️ 10:00</b></button>
     <div class="spacer"></div>
     <div class="speed">
@@ -73,13 +73,13 @@
       <p>Construye una ciudad colombiana desde las invasiones del estrato 1 hasta los rascacielos y mansiones del estrato 6.</p>
       <ol>
         <li><b>Vías:</b> 10 perfiles en metros (cada casilla mide 12 m): camino destapado, peatonal, calle de 2 o 3 carriles o de un sentido, avenidas de 4 y 6 carriles, bulevar con ciclorruta, troncal de buses y autopista. La vía define qué densidad crece al frente y siempre queda horizontal de lado a lado, aunque esté en ladera.</li>
-        <li><b>Zonas:</b> <span style="color:#45b956">residencial</span>, <span style="color:#3d8bfd">comercial</span> e <span style="color:#f7d117">industrial</span>, cada una en densidad baja, media o alta (teclas 1-9).</li>
+        <li><b>Zonas:</b> <span style="color:#45b956">residencial</span>, <span style="color:#3d8bfd">comercial</span>, <span style="color:#a066e8">oficinas</span> e <span style="color:#f7d117">industrial</span>, cada una en densidad baja, media o alta (teclas 1-9).</li>
         <li><b>Estrato:</b> no se elige. Sale del <b>valor del suelo</b>: servicios cercanos, tipo de vía, comercio y contaminación. Un mismo barrio puede empezar en estrato 1 o en estrato 5 según lo que tenga alrededor, y sube o baja con el tiempo.</li>
         <li><b>Industria:</b> da empleo y produce bienes para el comercio; si falta, la ciudad importa; si sobra, exporta. Contamina y baja el estrato de los vecinos.</li>
         <li><b>Transporte:</b> paraderos en calles/avenidas/troncales y estaciones de Metrocable (ideales en laderas). Crea líneas haciendo clic en las paradas en orden y Enter.</li>
         <li><b>Relieve:</b> las laderas empinadas sólo admiten baja densidad; usa la capa <i>Pendiente</i>.</li>
       </ol>
-      <p class="keys"><b>Controles:</b> clic derecho + arrastrar = girar e inclinar · rueda o Z/X = zoom · WASD/flechas = mover (Shift = rápido) · Q/E = girar 360° · R/F = inclinar · Espacio = pausa · N = día/noche · G = cuadrícula · Esc = cancelar</p>
+      <p class="keys"><b>Controles:</b> presionar la rueda + arrastrar = girar e inclinar · girar la rueda o Z/X = zoom · clic derecho + arrastrar = desplazar · WASD/flechas = mover (Shift = rápido) · Q/E = girar 360° · R/F = inclinar · Espacio = pausa · N = día/noche · G = cuadrícula · Esc = cancelar</p>
       <div class="row"><label class="terr">Terreno nuevo: <select id="terrSel"><option value="valle">Valle andino</option><option value="llano">Llano</option></select></label>
       <button id="helpNew">🗺️ Ciudad nueva</button><button id="helpDemo">🏙️ Ciudad de ejemplo</button><button id="helpClose" class="go">Continuar</button></div>
     </div>

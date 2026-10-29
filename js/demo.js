@@ -61,9 +61,9 @@ export function buildDemo() {
       let z = 0;
       if (y <= 12 && x >= 22 && x <= 33) z = y < 7 ? 9 : 8; // industria al norte, junto a la autopista
       else if (x < 20) z = 1; // ladera occidental
-      else if (x >= 28 && x <= 38 && y >= 26 && y <= 34) z = (x === 35 || x === 33 || y === 31 || y === 29) ? 6 : 3;
+      else if (x >= 28 && x <= 38 && y >= 26 && y <= 34) z = (x === 35 || x === 33) ? 12 : (y === 31 || y === 29) ? 6 : 3;
       else if (x >= 22 && x <= 44 && y >= 17 && y <= 48) z = (y === 31 || y === 29 || y === 47 || y === 45 || y === 17 || y === 15) ? 5 : (x >= 28 && x <= 40 ? 2 : (x + y) % 9 === 0 ? 4 : 2);
-      else if (x > 44) z = (y === 31 || y === 29) ? 5 : (x + y) % 13 === 0 ? 4 : 1;
+      else if (x > 44) z = (y === 31 || y === 29) ? ((x % 3) ? 11 : 5) : (x + y) % 13 === 0 ? 4 : 1;
       else if (y > 48) z = (x + y) % 7 === 0 ? 7 : 1;
       else z = 1;
       if (z) paintZone([{ x: x + O, y: y + O }], z);
