@@ -1,6 +1,7 @@
 // Modelos comerciales. Densidad -> tipología; estrato -> categoría del comercio (popular, medio, exclusivo).
 import { CELL, shade } from './geom.js';
 import { REF_COM, REF_COM_TABLE } from './models_ref.js';
+import { BIG_COM } from './models_big.js';
 import {
   F, PAL, lot, path, fence, tank, rebar, parapet, antenna, acUnit, hvac, awning, sign, blade, car, umbrella,
   pots, lamp, pergola, columns, pickW, laundry,
@@ -278,7 +279,7 @@ const TABLE = {
   3: { 1: [['sanandresito', 1]], 2: [['centroComercial', 0.6], ['hotel', 0.4]], 3: [['centroComercial', 0.55], ['hotel', 0.45]] },
 };
 // modelos basados en las fotos de referencia
-Object.assign(COM_TYPES, REF_COM);
+Object.assign(COM_TYPES, REF_COM, BIG_COM);
 for (const [d, byE] of Object.entries(REF_COM_TABLE)) for (const [e, list] of Object.entries(byE)) TABLE[d][e] = [...(TABLE[d][e] || []), ...list];
 
 export function pickComType(d, e, r) { return pickW(TABLE[d][tierOf(e)])(r); }

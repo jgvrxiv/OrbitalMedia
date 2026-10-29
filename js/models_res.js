@@ -2,6 +2,7 @@
 // (1-6, según el valor del suelo) define acabados, materiales y entorno. Un conjunto puede ser estrato 2 o 6.
 import { CELL, shade } from './geom.js';
 import { ROW_TYPES, ROW_TABLE } from './models_row.js';
+import { BIG_RES } from './models_big.js';
 import { REF_RES, REF_RES_TABLE } from './models_ref.js';
 import {
   F, PAL, lot, path, fence, tank, rebar, parapet, dish, antenna, acUnit, hvac, laundry, balcony, car, pool,
@@ -636,7 +637,7 @@ const TABLE = {
 };
 
 // vivienda continua de estratos 1-3 (models_row.js): reemplaza a las casas aisladas en los estratos bajos
-Object.assign(RES_TYPES, ROW_TYPES);
+Object.assign(RES_TYPES, ROW_TYPES, BIG_RES); // BIG_RES: lotes de 2×2 (se eligen aparte, ver game.js)
 for (const [d, byE] of Object.entries(ROW_TABLE)) {
   for (const [e, list] of Object.entries(byE)) {
     const replace = (d === '1' && e <= 2) || (d === '2' && e === '1');

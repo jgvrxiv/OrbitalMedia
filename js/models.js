@@ -5,6 +5,7 @@ import { COM_TYPES } from './models_com.js';
 import { IND_TYPES } from './models_ind.js';
 import { OFF_TYPES } from './models_off.js';
 import { PUBLIC, buildPublic } from './buildings.js';
+import { BIG_RES, BIG_COM, BIG_IND } from './models_big.js';
 
 export const VARIANTS = 4; // variantes por combinación (paletas/disposición)
 const cache = new Map();
@@ -65,6 +66,11 @@ export const MODEL_SETS = {
     { kind: 'ind', type: 'bodegasBoveda', e: 3, v: 0, label: 'bodegasBoveda' },
   ],
   row: () => ['hileraPopular', 'hileraAlta'].flatMap((t) => [1, 2, 3].flatMap((e) => [0, 1, 2, 3].map((v) => ({ kind: 'res', type: t, e, v, label: `${t} E${e} v${v}` })))),
+  big: () => [
+    ...Object.keys(BIG_RES).flatMap((t) => [4, 6].flatMap((e) => [0, 1].map((v) => ({ kind: 'res', type: t, e, v, w: 2, label: `${t} E${e} v${v}` })))),
+    ...[0, 1].map((v) => ({ kind: 'com', type: 'centroComercialGrande', e: 4, v, w: 2, label: `centroComercialGrande v${v}` })),
+    ...[0, 1].map((v) => ({ kind: 'ind', type: 'fabricaGrande', e: 3, v, w: 2, label: `fabricaGrande v${v}` })),
+  ],
   pub: () => Object.keys(PUBLIC).map((t) => ({ kind: 'pub', type: t, w: PUBLIC[t].w, label: PUBLIC[t].name })),
   ind: () => Object.keys(IND_TYPES).flatMap((t) => [0, 1].map((v) => ({ kind: 'ind', type: t, e: 3, v, label: `${t} v${v}` }))),
 };

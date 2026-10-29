@@ -2,6 +2,7 @@
 // agroindustria; plantas, tanques y centros logísticos.
 import { CELL, shade } from './geom.js';
 import { REF_IND, REF_IND_TABLE } from './models_ref.js';
+import { BIG_IND } from './models_big.js';
 import { PAL, tank, chimney, container, pallets, truck, hvac, sign, lamp, pickW } from './kit.js';
 
 function yard(B, c = '#9a968e') {
@@ -199,7 +200,7 @@ const TABLE = {
   3: [['planta', 0.4], ['tanques', 0.25], ['logistica', 0.35]],
 };
 // modelos basados en las fotos de referencia
-Object.assign(IND_TYPES, REF_IND);
+Object.assign(IND_TYPES, REF_IND, BIG_IND);
 for (const [d, list] of Object.entries(REF_IND_TABLE)) TABLE[d] = [...(TABLE[d] || []), ...list];
 
 export function pickIndType(d, r) { return pickW(TABLE[d])(r); }

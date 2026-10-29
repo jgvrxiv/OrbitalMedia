@@ -141,7 +141,7 @@ const check = (name, ok, extra = '') => { results.push({ name, ok, extra }); con
   check('las obras empiezan como obra y terminan', ob.total > 0 && ob.growing > 0, `${ob.growing}/${ob.total} en obra → ${ob.after} tras 12 s`);
 
   // 7) galería de modelos: ningún modelo falla al construirse
-  for (const set of ['res1', 'res2', 'res3', 'com', 'ind', 'pub', 'ref', 'row']) {
+  for (const set of ['res1', 'res2', 'res3', 'com', 'ind', 'pub', 'ref', 'row', 'big']) {
     const gp = await browser.newPage({ viewport: { width: 1500, height: 900 } });
     const gerr = [];
     gp.on('pageerror', (e) => gerr.push(e.message));

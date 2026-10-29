@@ -17,6 +17,7 @@ import { pickComType, COM_JOBS, COM_TYPES, tierOf } from './models_com.js';
 import { pickIndType, IND_JOBS, IND_TYPES } from './models_ind.js';
 import { pickOffType, OFF_JOBS, OFF_TYPES } from './models_off.js';
 import { PUBLIC, SERVICES, buildPublic } from './buildings.js';
+import { pickBigType } from './models_big.js';
 
 export const COST = { zone: 500, startMoney: 6_000_000 };
 export const ZONES = {
@@ -391,7 +392,8 @@ export function removeBuilding(b) {
 
 function restyle(b, e) {
   b.e = e;
-  if (b.kind === 'res') b.type = pickResType(b.d, e, rand);
+  if (b.w > 1) { /* lote grande: conserva su tipo y sólo cambia el acabado */ }
+  else if (b.kind === 'res') b.type = pickResType(b.d, e, rand);
   else if (b.kind === 'com') b.type = pickComType(b.d, e, rand);
   else if (b.kind === 'off') b.type = pickOffType(b.d, e, rand);
   recalc(b);
@@ -673,6 +675,34 @@ export function bulldoze(tiles) {
 // ---------- simulación ----------
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
+// Lote grande de 2×2: busca un bloque libre de la misma zona con la fila delantera frente a la misma vía.
+function tryBig(t, k, e) {
+  const Z = ZONES[t.zone];
+  const type = pickBigType(k, Z.d, e, rand);
+  if (!type) return false;
+  const i0 = idx(t.x, t.y);
+  if (G.parcels?.has(i0)) return false; // junto a diagonales los lotes ya son girados
+  const f = G.face[i0];
+  if (f < 0) return false;
+  const fw = DIRS[f], lat = DIRS[(f + 1) % 4];
+  for (const side of [1, -1]) {
+    const cells = [];
+    let ok = true;
+    for (let a = 0; a < 2 && ok; a++) for (let b = 0; b < 2 && ok; b++) {
+      const x = t.x + lat[0] * side * a - fw[0] * b, y = t.y + lat[1] * side * a - fw[1] * b;
+      const c = tile(x, y);
+      if (!c || c.road || c.stop || c.bld || c.zone !== t.zone || G.parcels?.has(idx(x, y))) { ok = false; break; }
+      if (b === 0 && (G.face[idx(x, y)] !== f || G.access[idx(x, y)] < Z.d)) { ok = false; break; }
+      cells.push([x, y]);
+    }
+    if (!ok) continue;
+    const ox = Math.min(...cells.map((c) => c[0])), oy = Math.min(...cells.map((c) => c[1]));
+    addBuilding({ kind: { r: 'res', c: 'com', i: 'ind' }[k], d: Z.d, e, type, x: ox, y: oy, w: 2, h: 2, rot: f });
+    return true;
+  }
+  return false;
+}
+
 function spawn(t) {
   const Z = ZONES[t.zone];
   const i = idx(t.x, t.y);
@@ -681,14 +711,16 @@ function spawn(t) {
   if (Z.k === 'r') {
     let e = estratoOf(G.lv[i]);
     if (e > 1 && rand() < 0.2) e--;
+    if (tryBig(t, 'r', e)) return;
     addBuilding({ ...base, kind: 'res', e, type: pickResType(Z.d, e, rand) });
   } else if (Z.k === 'o') {
     const e = estratoOf(G.lv[i]);
     addBuilding({ ...base, kind: 'off', e, type: pickOffType(Z.d, e, rand) });
   } else if (Z.k === 'c') {
     const e = estratoOf(G.lv[i]);
+    if (tryBig(t, 'c', e)) return;
     addBuilding({ ...base, kind: 'com', e, type: pickComType(Z.d, e, rand) });
-  } else addBuilding({ ...base, kind: 'ind', e: 3, type: pickIndType(Z.d, rand) });
+  } else if (!tryBig(t, 'i', 3)) addBuilding({ ...base, kind: 'ind', e: 3, type: pickIndType(Z.d, rand) });
 }
 
 function simulate() {

@@ -36,6 +36,10 @@ Luego visita http://localhost:8000. El botón **🏙️ Ejemplo** genera una ciu
   comparten medianeras, con distintas alturas y colores, antejardín según estrato y patio trasero; las
   manzanas populares forman un frente continuo de calle, sin "islas" (la separación lateral es de estratos
   altos). Cada modelo tiene 4 variantes de tamaño (número de frentes, profundidad y pisos).
+- **Lotes grandes de 2×2 casillas (24 × 24 m)** donde el valor del suelo es alto: mansión con piscina y
+  jardín, hacienda colonial en U con patio, conjunto cerrado con zona común, torres sobre podio, centro
+  comercial con parqueadero y fábrica grande. Crecen solos si hay un bloque libre de la misma zona con el
+  frente sobre la misma vía.
 - **Glorietas**: herramienta *Vías → Intersecciones → Glorieta*; clic sobre un cruce de 3 o más vías la
   crea y otro clic la quita.
 - **Industria**: talleres, cultivos de flores, ladrilleras, bodegas, fábricas textiles, agroindustria,
@@ -72,11 +76,12 @@ Enter = terminar línea.
 | `js/roadnet.js` | Red vial como grafo (segmentos ortogonales y diagonales, nodos) proyectada sobre la cuadrícula. |
 | `js/netpath.js` | Rutas de bus y caminatas de carros sobre el grafo. |
 | `js/parcels.js` | Lotes generados a partir de los segmentos de vía, rectos y diagonales (fase 3). |
+| `js/models_big.js` | Lotes grandes de 2×2 casillas (mansión, hacienda, conjunto cerrado, torres con podio, centro comercial, fábrica). |
 | `js/models_row.js` | Vivienda continua de estratos 1-3 (casas y edificios con locales en frente continuo). |
 | `js/scene.js` | Escena, relieve, cielo día/noche, cámara y selección. |
 | `js/game.js` | Estado, construcción y simulación (valor del suelo, demanda, economía). |
 | `js/transit.js` | Paradas, líneas, vehículos y tráfico ambiente. |
 | `js/ui.js`, `js/main.js`, `js/demo.js` | Interfaz, arranque y ciudad de ejemplo. |
-| `dev/gallery.html` | Galería de desarrollo de modelos (`?set=res1|res2|res3|com|ind|pub|ref|row`, `&night=1`). |
+| `dev/gallery.html` | Galería de desarrollo de modelos (`?set=res1|res2|res3|com|ind|pub|ref|row|big`, `&night=1`). |
 | `dev/regression.js` | Regresión automática: `node dev/regression.js` genera la ciudad de ejemplo, cruces en llano y ladera, diagonales, glorietas, obras, guardado/carga y galerías; verifica y deja capturas en `dev/out/`. |
 | `docs/ANALISIS_CUADRICULA_Y_RELIEVE.md` | Análisis de salir de la cuadrícula y del relieve. |
