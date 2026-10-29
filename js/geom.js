@@ -1,7 +1,9 @@
-// Utilidades de geometría procedural: un Builder acumula caras en "cubetas"
-// (sólido sin textura, y paredes con textura de ventanas/ladrillo/vidrio) y
-// produce una única BufferGeometry con grupos => 1 mesh por edificio.
+// Geometría procedural. Un Builder acumula triángulos con color de vértice y UV dentro del atlas
+// (js/atlas.js) y produce una única BufferGeometry => un solo material y un draw call por modelo.
 import * as THREE from '../vendor/three.module.min.js';
+import { CELL, LIT, cellUV, hasLit, makeAtlas } from './atlas.js';
+
+export { CELL };
 
 export function rng(seed) {
   let a = seed >>> 0;
@@ -15,86 +17,166 @@ export function rng(seed) {
   f.pick = (arr) => arr[Math.floor(f() * arr.length)];
   f.range = (a0, b0) => a0 + f() * (b0 - a0);
   f.int = (a0, b0) => Math.floor(a0 + f() * (b0 - a0 + 1));
+  f.chance = (p) => f() < p;
   return f;
 }
 
-const BUCKETS = ['solid', 'win', 'brick', 'glass', 'store'];
 const _c = new THREE.Color();
+const PLAIN_UV = (() => { const [u0, v0, u1, v1] = cellUV(CELL.PLAIN); return [(u0 + u1) / 2, (v0 + v1) / 2]; })();
 
-export function col(c) {
-  return _c.set(c).clone();
+// tono: multiplica un color por k (oclusión / variaciones)
+export function shade(color, k) {
+  _c.set(color);
+  return [_c.r * k, _c.g * k, _c.b * k];
 }
+const rgb = (color) => (Array.isArray(color) ? color : shade(color, 1));
+
+// oclusión ambiental falsa: oscurece la base de los muros
+const ao = (y) => 0.74 + 0.26 * Math.min(1, Math.max(0, y) / 0.55);
+
+// estilos de fachada heredados (tex) -> función de celda
+const TEX = {
+  win: () => CELL.WIN_SLIDE,
+  brick: () => CELL.BRICK_WIN,
+  glass: () => CELL.CURTAIN_SPAN,
+  store: () => CELL.SHOP,
+};
 
 export class Builder {
-  constructor() {
-    this.b = {};
-    for (const k of BUCKETS) this.b[k] = { p: [], n: [], c: [], u: [] };
+  constructor(seed = 1) {
+    this.p = []; this.n = []; this.c = []; this.u = [];
+    this.r = rng(seed);
+    this.litP = 0.32; // probabilidad de ventana encendida de noche
   }
 
-  // triángulo con normal plana
-  tri(bucket, a, b, c, color, uvs) {
-    const B = this.b[bucket];
+  // triángulo con normal plana. cols: color único o array de 3 colores [r,g,b]
+  tri(a, b, c, color, uvs, cols) {
     const ux = b[0] - a[0], uy = b[1] - a[1], uz = b[2] - a[2];
     const vx = c[0] - a[0], vy = c[1] - a[1], vz = c[2] - a[2];
     let nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
     const l = Math.hypot(nx, ny, nz) || 1;
     nx /= l; ny /= l; nz /= l;
-    const cc = col(color);
+    const cc = rgb(color);
     [a, b, c].forEach((v, i) => {
-      B.p.push(v[0], v[1], v[2]);
-      B.n.push(nx, ny, nz);
-      B.c.push(cc.r, cc.g, cc.b);
-      const uv = uvs ? uvs[i] : [0, 0];
-      B.u.push(uv[0], uv[1]);
+      this.p.push(v[0], v[1], v[2]);
+      this.n.push(nx, ny, nz);
+      const k = cols ? cols[i] : cc;
+      this.c.push(k[0], k[1], k[2]);
+      const uv = uvs ? uvs[i] : PLAIN_UV;
+      this.u.push(uv[0], uv[1]);
     });
   }
 
-  quad(bucket, a, b, c, d, color, uvs) {
-    this.tri(bucket, a, b, c, color, uvs && [uvs[0], uvs[1], uvs[2]]);
-    this.tri(bucket, a, c, d, color, uvs && [uvs[0], uvs[2], uvs[3]]);
+  // compatibilidad: quad(bucket, a,b,c,d,color) o quad(a,b,c,d,color)
+  quad(...args) {
+    if (typeof args[0] === 'string') args.shift();
+    const [a, b, c, d, color, uvs, cols] = args;
+    this.tri(a, b, c, color, uvs && [uvs[0], uvs[1], uvs[2]], cols && [cols[0], cols[1], cols[2]]);
+    this.tri(a, c, d, color, uvs && [uvs[0], uvs[2], uvs[3]], cols && [cols[0], cols[2], cols[3]]);
   }
 
-  // Caja. (x,z) centro, y base. opts: tex ('win'|'brick'|'glass'|'store'), fl pisos, cw ancho de celda,
-  // top color distinto para techo, noTop
-  box(x, y, z, w, h, d, color, o = {}) {
-    const x0 = x - w / 2, x1 = x + w / 2, y0 = y, y1 = y + h, z0 = z - d / 2, z1 = z + d / 2;
-    const tex = o.tex || 'solid';
-    const fl = o.fl || Math.max(1, Math.round(h / 0.28));
-    const cw = o.cw || 0.3;
-    const side = (a, b, c, dd, len) => {
-      if (tex === 'solid') this.quad('solid', a, b, c, dd, color);
-      else {
-        const cu = Math.max(1, Math.round(len / cw));
-        this.quad(tex, a, b, c, dd, color, [[0, 0], [cu, 0], [cu, fl], [0, fl]]);
+  // quad texturizado con una celda del atlas (a=abajo-izq, b=abajo-der, c=arriba-der, d=arriba-izq)
+  cellQuad(a, b, c, d, color, cell, cols, lit) {
+    let id = cell;
+    if (lit === undefined) lit = hasLit(cell) && this.r() < this.litP;
+    if (lit && hasLit(cell)) id += LIT;
+    const [u0, v0, u1, v1] = cellUV(id);
+    this.quad(a, b, c, d, color, [[u0, v0], [u1, v0], [u1, v1], [u0, v1]], cols);
+  }
+
+  // Muro vertical de a(ax,az) a b(bx,bz): visible desde el lado (-ez, ex). Rejilla de pisos×columnas.
+  // pick(f, c, floors, cols) -> celda | [celda, color]
+  wall(ax, az, bx, bz, y0, h, color, floors, cols, pick, lit) {
+    const fh = h / floors;
+    for (let f = 0; f < floors; f++) {
+      const ya = y0 + f * fh, yb = ya + fh;
+      for (let c = 0; c < cols; c++) {
+        const t0 = c / cols, t1 = (c + 1) / cols;
+        const x0 = ax + (bx - ax) * t0, z0 = az + (bz - az) * t0;
+        const x1 = ax + (bx - ax) * t1, z1 = az + (bz - az) * t1;
+        let cell = pick ? pick(f, c, floors, cols) : CELL.PLAIN;
+        let col = color;
+        if (Array.isArray(cell)) { col = cell[1]; cell = cell[0]; }
+        if (cell === null || cell === undefined) continue;
+        const kb = ao(ya), kt = ao(yb);
+        const cb = shade(col, kb), ct = shade(col, kt);
+        this.cellQuad([x0, ya, z0], [x1, ya, z1], [x1, yb, z1], [x0, yb, z0], col, cell, [cb, cb, ct, ct], lit);
       }
-    };
-    side([x0, y0, z1], [x1, y0, z1], [x1, y1, z1], [x0, y1, z1], w);
-    side([x1, y0, z0], [x0, y0, z0], [x0, y1, z0], [x1, y1, z0], w);
-    side([x1, y0, z1], [x1, y0, z0], [x1, y1, z0], [x1, y1, z1], d);
-    side([x0, y0, z0], [x0, y0, z1], [x0, y1, z1], [x0, y1, z0], d);
-    if (!o.noTop) this.quad('solid', [x0, y1, z1], [x1, y1, z1], [x1, y1, z0], [x0, y1, z0], o.top || color);
-  }
-
-  // Techo a dos aguas. eje 'x' => cumbrera paralela a X.
-  gable(x, y, z, w, h, d, color, axis = 'x', o = {}) {
-    const x0 = x - w / 2, x1 = x + w / 2, z0 = z - d / 2, z1 = z + d / 2, yt = y + h;
-    if (axis === 'x') {
-      const zm = z;
-      this.quad('solid', [x0, y, z1], [x1, y, z1], [x1, yt, zm], [x0, yt, zm], color);
-      this.quad('solid', [x1, y, z0], [x0, y, z0], [x0, yt, zm], [x1, yt, zm], color);
-      this.tri('solid', [x1, y, z1], [x1, y, z0], [x1, yt, zm], o.gable || color);
-      this.tri('solid', [x0, y, z0], [x0, y, z1], [x0, yt, zm], o.gable || color);
-    } else {
-      const xm = x;
-      this.quad('solid', [x1, y, z1], [x1, y, z0], [xm, yt, z0], [xm, yt, z1], color);
-      this.quad('solid', [x0, y, z0], [x0, y, z1], [xm, yt, z1], [xm, yt, z0], color);
-      this.tri('solid', [x0, y, z1], [x1, y, z1], [xm, yt, z1], o.gable || color);
-      this.tri('solid', [x1, y, z0], [x0, y, z0], [xm, yt, z0], o.gable || color);
     }
   }
 
+  // Caja con fachadas. (x,z) centro, y base. opts:
+  //  tex: estilo heredado | pick(f,c,F,C,side) | sides: {front,back,left,right} -> pick
+  //  fl: pisos, cw: ancho de módulo, top: color del techo, noTop, roofCell
+  box(x, y, z, w, h, d, color, o = {}) {
+    const x0 = x - w / 2, x1 = x + w / 2, z0 = z - d / 2, z1 = z + d / 2, y1 = y + h;
+    const fl = o.fl || Math.max(1, Math.round(h / 0.28));
+    const cw = o.cw || 0.3;
+    const basePick = o.pick || (o.tex && TEX[o.tex]) || null;
+    const side = (name, ax, az, bx, bz, len) => {
+      const sp = (o.sides && o.sides[name]) !== undefined ? o.sides[name] : basePick;
+      const cols = sp ? Math.max(1, Math.round(len / cw)) : 1;
+      const floors = sp ? fl : 1;
+      this.wall(ax, az, bx, bz, y, h, color, floors, cols, sp ? (f, c, F, C) => sp(f, c, F, C, name) : null, o.lit);
+    };
+    side('front', x0, z1, x1, z1, w);
+    side('back', x1, z0, x0, z0, w);
+    side('right', x1, z1, x1, z0, d);
+    side('left', x0, z0, x0, z1, d);
+    if (!o.noTop) {
+      const tc = o.top || color;
+      if (o.roofCell !== undefined) this.cellQuad([x0, y1, z1], [x1, y1, z1], [x1, y1, z0], [x0, y1, z0], tc, o.roofCell, null, false);
+      else this.quad([x0, y1, z1], [x1, y1, z1], [x1, y1, z0], [x0, y1, z0], tc);
+    }
+  }
+
+  // caja lisa simple (sin módulos)
+  slab(x, y, z, w, h, d, color, top) {
+    this.box(x, y, z, w, h, d, color, { top });
+  }
+
+  // Techo a dos aguas; cell opcional (ROOFTILE, CORRUG) para las pendientes
+  gable(x, y, z, w, h, d, color, axis = 'x', o = {}) {
+    const x0 = x - w / 2, x1 = x + w / 2, z0 = z - d / 2, z1 = z + d / 2, yt = y + h;
+    const cell = o.cell ?? CELL.ROOFTILE;
+    const gc = o.gable || color;
+    if (axis === 'x') {
+      this.cellQuad([x0, y, z1], [x1, y, z1], [x1, yt, z], [x0, yt, z], color, cell, null, false);
+      this.cellQuad([x1, y, z0], [x0, y, z0], [x0, yt, z], [x1, yt, z], color, cell, null, false);
+      this.tri([x1, y, z1], [x1, y, z0], [x1, yt, z], gc);
+      this.tri([x0, y, z0], [x0, y, z1], [x0, yt, z], gc);
+    } else {
+      this.cellQuad([x1, y, z1], [x1, y, z0], [x, yt, z0], [x, yt, z1], color, cell, null, false);
+      this.cellQuad([x0, y, z0], [x0, y, z1], [x, yt, z1], [x, yt, z0], color, cell, null, false);
+      this.tri([x0, y, z1], [x1, y, z1], [x, yt, z1], gc);
+      this.tri([x1, y, z0], [x0, y, z0], [x, yt, z0], gc);
+    }
+  }
+
+  // Techo a cuatro aguas (hip). Cumbrera a lo largo del eje mayor.
+  hip(x, y, z, w, h, d, color, cell = CELL.ROOFTILE) {
+    const x0 = x - w / 2, x1 = x + w / 2, z0 = z - d / 2, z1 = z + d / 2, yt = y + h;
+    if (w >= d) {
+      const r = (w - d) / 2;
+      const A = [x - r, yt, z], Bp = [x + r, yt, z];
+      this.cellQuad([x0, y, z1], [x1, y, z1], Bp, A, color, cell, null, false);
+      this.cellQuad([x1, y, z0], [x0, y, z0], A, Bp, color, cell, null, false);
+      this.tri([x1, y, z1], [x1, y, z0], Bp, color);
+      this.tri([x0, y, z0], [x0, y, z1], A, color);
+    } else {
+      const r = (d - w) / 2;
+      const A = [x, yt, z - r], Bp = [x, yt, z + r];
+      this.cellQuad([x1, y, z1], [x1, y, z0], A, Bp, color, cell, null, false);
+      this.cellQuad([x0, y, z0], [x0, y, z1], Bp, A, color, cell, null, false);
+      this.tri([x0, y, z1], [x1, y, z1], Bp, color);
+      this.tri([x1, y, z0], [x0, y, z0], A, color);
+    }
+    // alero
+    this.quad([x0 - 0.02, y, z1 + 0.02], [x1 + 0.02, y, z1 + 0.02], [x1 + 0.02, y - 0.015, z1 + 0.02], [x0 - 0.02, y - 0.015, z1 + 0.02], shade(color, 0.7));
+  }
+
   // Techo de una agua (zinc). La parte alta mira hacia dir: 'x+','x-','z+','z-'
-  shed(x, y, z, w, d, hLow, hHigh, color, dir = 'z-') {
+  shed(x, y, z, w, d, hLow, hHigh, color, dir = 'z-', cell = CELL.CORRUG) {
     const x0 = x - w / 2, x1 = x + w / 2, z0 = z - d / 2, z1 = z + d / 2;
     const H = { x0z0: hLow, x1z0: hLow, x0z1: hLow, x1z1: hLow };
     if (dir === 'z-') { H.x0z0 = hHigh; H.x1z0 = hHigh; }
@@ -102,11 +184,12 @@ export class Builder {
     if (dir === 'x-') { H.x0z0 = hHigh; H.x0z1 = hHigh; }
     if (dir === 'x+') { H.x1z0 = hHigh; H.x1z1 = hHigh; }
     const A = [x0, y + H.x0z1, z1], B = [x1, y + H.x1z1, z1], C = [x1, y + H.x1z0, z0], D = [x0, y + H.x0z0, z0];
-    this.quad('solid', A, B, C, D, color);
-    this.quad('solid', [x0, y, z1], [x1, y, z1], B, A, color);
-    this.quad('solid', [x1, y, z0], [x0, y, z0], D, C, color);
-    this.quad('solid', [x1, y, z1], [x1, y, z0], C, B, color);
-    this.quad('solid', [x0, y, z0], [x0, y, z1], A, D, color);
+    this.cellQuad(A, B, C, D, color, cell, null, false);
+    const sc = shade(color, 0.78);
+    this.quad([x0, y, z1], [x1, y, z1], B, A, sc);
+    this.quad([x1, y, z0], [x0, y, z0], D, C, sc);
+    this.quad([x1, y, z1], [x1, y, z0], C, B, sc);
+    this.quad([x0, y, z0], [x0, y, z1], A, D, sc);
   }
 
   // Caja rotada alrededor de Y (y = base)
@@ -116,34 +199,43 @@ export class Builder {
     g.dispose();
   }
 
-  // Añade cualquier THREE.BufferGeometry (cilindro, cono, esfera…) transformada.
-  geo(g, color, pos = [0, 0, 0], rot = [0, 0, 0], scl = [1, 1, 1], bucket = 'solid') {
+  // Añade cualquier THREE.BufferGeometry (cilindro, cono, esfera…) transformada (UV = celda lisa)
+  geo(g, color, pos = [0, 0, 0], rot = [0, 0, 0], scl = [1, 1, 1], cell = null) {
     const m = new THREE.Matrix4().compose(
       new THREE.Vector3(...pos),
       new THREE.Quaternion().setFromEuler(new THREE.Euler(...rot)),
       new THREE.Vector3(...scl),
     );
     const nm = new THREE.Matrix3().getNormalMatrix(m);
-    const P = g.attributes.position, N = g.attributes.normal;
+    const P = g.attributes.position, Nn = g.attributes.normal, U = g.attributes.uv;
     const idx = g.index ? g.index.array : null;
     const cnt = idx ? idx.length : P.count;
-    const cc = col(color);
+    const cc = rgb(color);
     const v = new THREE.Vector3(), n = new THREE.Vector3();
-    const B = this.b[bucket];
+    const uvr = cell !== null ? cellUV(cell) : null;
     for (let i = 0; i < cnt; i++) {
       const k = idx ? idx[i] : i;
       v.fromBufferAttribute(P, k).applyMatrix4(m);
-      n.fromBufferAttribute(N, k).applyMatrix3(nm).normalize();
-      B.p.push(v.x, v.y, v.z);
-      B.n.push(n.x, n.y, n.z);
-      B.c.push(cc.r, cc.g, cc.b);
-      B.u.push(0, 0);
+      n.fromBufferAttribute(Nn, k).applyMatrix3(nm).normalize();
+      this.p.push(v.x, v.y, v.z);
+      this.n.push(n.x, n.y, n.z);
+      const kk = ao(v.y) * 0.25 + 0.75;
+      this.c.push(cc[0] * kk, cc[1] * kk, cc[2] * kk);
+      if (uvr && U) this.u.push(uvr[0] + U.getX(k) * (uvr[2] - uvr[0]), uvr[1] + U.getY(k) * (uvr[3] - uvr[1]));
+      else this.u.push(PLAIN_UV[0], PLAIN_UV[1]);
     }
   }
 
-  cyl(x, y, z, r, h, color, seg = 8, rTop = null) {
-    const g = new THREE.CylinderGeometry(rTop ?? r, r, h, seg);
-    this.geo(g, color, [x, y + h / 2, z]);
+  cyl(x, y, z, r, h, color, seg = 10, rTop = null, cell = null) {
+    const g = new THREE.CylinderGeometry(rTop ?? r, r, h, seg, 1, cell === null);
+    this.geo(g, color, [x, y + h / 2, z], [0, 0, 0], [1, 1, 1], cell);
+    g.dispose();
+  }
+
+  // cilindro horizontal a lo largo de X o Z
+  hcyl(x, y, z, r, len, color, axis = 'x', seg = 10) {
+    const g = new THREE.CylinderGeometry(r, r, len, seg);
+    this.geo(g, color, [x, y, z], axis === 'x' ? [0, 0, Math.PI / 2] : [Math.PI / 2, 0, 0]);
     g.dispose();
   }
 
@@ -153,118 +245,86 @@ export class Builder {
     g.dispose();
   }
 
-  sphere(x, y, z, r, color, sx = 1, sy = 1, sz = 1) {
-    const g = new THREE.SphereGeometry(r, 8, 6);
+  sphere(x, y, z, r, color, sx = 1, sy = 1, sz = 1, seg = 8) {
+    const g = new THREE.SphereGeometry(r, seg, Math.max(4, seg - 2));
     this.geo(g, color, [x, y, z], [0, 0, 0], [sx, sy, sz]);
     g.dispose();
   }
 
-  // plano horizontal (piscina, césped…)
-  plane(x, y, z, w, d, color) {
-    this.quad('solid', [x - w / 2, y, z + d / 2], [x + w / 2, y, z + d / 2], [x + w / 2, y, z - d / 2], [x - w / 2, y, z - d / 2], color);
-  }
-
-  // Palma de cera (árbol nacional) o palma común
-  palm(x, z, h = 0.6, wax = false) {
-    this.cyl(x, 0, z, 0.018, h, wax ? '#d8cdb8' : '#8a6a46', 5, 0.012);
-    const leaf = wax ? '#3f8f3a' : '#4aa043';
-    for (let i = 0; i < 6; i++) {
-      const a = (i / 6) * Math.PI * 2;
-      this.geo(new THREE.ConeGeometry(0.03, 0.26, 4), leaf, [x + Math.cos(a) * 0.1, h + 0.0, z + Math.sin(a) * 0.1], [Math.sin(a) * 1.2, 0, -Math.cos(a) * 1.2]);
+  // bóveda semicilíndrica (invernaderos, hangares). len a lo largo de axis, w = luz, h = flecha.
+  vault(x, y, z, w, len, h, color, axis = 'x', cell = null, seg = 10, caps = true) {
+    const P = (along, across, up) => (axis === 'x' ? [x + along, y + up, z + across] : [x + across, y + up, z + along]);
+    const L = len / 2;
+    for (let i = 0; i < seg; i++) {
+      const t0 = (i / seg) * Math.PI, t1 = ((i + 1) / seg) * Math.PI;
+      const c0 = Math.cos(t0) * w / 2, s0 = Math.sin(t0) * h, c1 = Math.cos(t1) * w / 2, s1 = Math.sin(t1) * h;
+      const q = [P(-L, c0, s0), P(L, c0, s0), P(L, c1, s1), P(-L, c1, s1)];
+      if (cell !== null) this.cellQuad(q[0], q[1], q[2], q[3], color, cell, null, false);
+      else this.quad(q[0], q[1], q[2], q[3], color);
+      if (caps) {
+        const cc = shade(color, 0.85);
+        this.tri(P(-L, 0, 0), P(-L, c0, s0), P(-L, c1, s1), cc);
+        this.tri(P(L, 0, 0), P(L, c1, s1), P(L, c0, s0), cc);
+      }
     }
   }
 
-  tree(x, z, h = 0.3, c = '#3f8f3a') {
-    this.cyl(x, 0, z, 0.03, h * 0.55, '#6b4a2b', 5);
-    this.sphere(x, h * 0.7, z, h * 0.38, c, 1, 0.9, 1);
+  // plano horizontal (piscina, césped…)
+  plane(x, y, z, w, d, color, cell = null) {
+    const a = [x - w / 2, y, z + d / 2], b = [x + w / 2, y, z + d / 2], c = [x + w / 2, y, z - d / 2], dd = [x - w / 2, y, z - d / 2];
+    if (cell !== null) this.cellQuad(a, b, c, dd, color, cell, null, false);
+    else this.quad(a, b, c, dd, color);
+  }
+
+  // Palma de cera (árbol nacional) o palma común
+  palm(x, z, h = 0.6, wax = false, y = 0) {
+    this.cyl(x, y, z, 0.02, h, wax ? '#d8cdb8' : '#8a6a46', 6, 0.013);
+    const leaf = wax ? '#3f8f3a' : '#4aa043';
+    for (let i = 0; i < 7; i++) {
+      const a = (i / 7) * Math.PI * 2;
+      const g = new THREE.ConeGeometry(0.035, 0.3, 4);
+      this.geo(g, i % 2 ? leaf : shade(leaf, 0.85), [x + Math.cos(a) * 0.11, y + h - 0.02, z + Math.sin(a) * 0.11], [Math.sin(a) * 1.25, 0, -Math.cos(a) * 1.25]);
+      g.dispose();
+    }
+    this.sphere(x, y + h, z, 0.03, '#6b8f3a');
+  }
+
+  tree(x, z, h = 0.3, c = '#3f8f3a', y = 0) {
+    this.cyl(x, y, z, 0.025, h * 0.5, '#6b4a2b', 6);
+    this.sphere(x, y + h * 0.66, z, h * 0.34, c, 1, 0.92, 1, 7);
+    this.sphere(x + h * 0.12, y + h * 0.82, z - h * 0.08, h * 0.22, shade(c, 1.12), 1, 0.9, 1, 6);
+  }
+
+  // arbusto
+  bush(x, z, s = 0.08, c = '#4d8f3f', y = 0) {
+    this.sphere(x, y + s * 0.6, z, s, c, 1.2, 0.8, 1.2, 6);
   }
 
   build() {
-    const pos = [], nor = [], colr = [], uv = [];
     const geom = new THREE.BufferGeometry();
-    const order = [];
-    let start = 0;
-    BUCKETS.forEach((k, i) => {
-      const B = this.b[k];
-      const count = B.p.length / 3;
-      if (!count) return;
-      pos.push(...B.p); nor.push(...B.n); colr.push(...B.c); uv.push(...B.u);
-      geom.addGroup(start, count, order.length);
-      order.push(k);
-      start += count;
-    });
-    geom.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-    geom.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
-    geom.setAttribute('color', new THREE.Float32BufferAttribute(colr, 3));
-    geom.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+    geom.setAttribute('position', new THREE.Float32BufferAttribute(this.p, 3));
+    geom.setAttribute('normal', new THREE.Float32BufferAttribute(this.n, 3));
+    geom.setAttribute('color', new THREE.Float32BufferAttribute(this.c, 3));
+    geom.setAttribute('uv', new THREE.Float32BufferAttribute(this.u, 2));
     geom.computeBoundingSphere();
-    geom.userData.order = order;
+    geom.computeBoundingBox();
     return geom;
   }
 }
 
-// ---------- texturas procedurales ----------
-function canvasTex(size, draw) {
-  const c = document.createElement('canvas');
-  c.width = c.height = size;
-  const g = c.getContext('2d');
-  draw(g, size);
-  const t = new THREE.CanvasTexture(c);
-  t.wrapS = t.wrapT = THREE.RepeatWrapping;
-  t.colorSpace = THREE.SRGBColorSpace;
-  t.anisotropy = 4;
-  return t;
-}
-
-const texWin = () => canvasTex(64, (g, s) => {
-  g.fillStyle = '#ffffff'; g.fillRect(0, 0, s, s);
-  g.fillStyle = '#d6d6d6'; g.fillRect(0, s - 6, s, 6); // losa
-  g.fillStyle = '#e9e9e9'; g.fillRect(14, 10, 36, 38);
-  g.fillStyle = '#35465c'; g.fillRect(17, 13, 30, 32);
-  g.fillStyle = '#5d7a99'; g.fillRect(17, 13, 30, 12);
-  g.fillStyle = '#e9e9e9'; g.fillRect(31, 13, 2, 32);
-});
-
-const texBrick = () => canvasTex(64, (g, s) => {
-  g.fillStyle = '#ffffff'; g.fillRect(0, 0, s, s);
-  g.fillStyle = 'rgba(0,0,0,0.16)';
-  for (let r = 0; r < 8; r++) {
-    g.fillRect(0, r * 8, s, 1);
-    const off = r % 2 ? 0 : 8;
-    for (let x = off; x < s; x += 16) g.fillRect(x, r * 8, 1, 8);
-  }
-  g.fillStyle = '#3a3a3a'; g.fillRect(24, 24, 16, 20); // ventanita
-  g.fillStyle = '#6c7f93'; g.fillRect(25, 25, 14, 8);
-});
-
-const texGlass = () => canvasTex(32, (g, s) => {
-  g.fillStyle = '#d9ecf7'; g.fillRect(0, 0, s, s);
-  const gr = g.createLinearGradient(0, 0, s, s);
-  gr.addColorStop(0, '#ffffff'); gr.addColorStop(1, '#8fb4d0');
-  g.fillStyle = gr; g.fillRect(1, 1, s - 2, s - 7);
-  g.fillStyle = '#3b4a58'; g.fillRect(0, s - 5, s, 5);
-});
-
-const texStore = () => canvasTex(64, (g, s) => {
-  g.fillStyle = '#ffffff'; g.fillRect(0, 0, s, s);
-  g.fillStyle = '#3c4a5a'; g.fillRect(6, 20, 52, 38);
-  g.fillStyle = '#9fd0e8'; g.fillRect(8, 22, 48, 20);
-  g.fillStyle = '#ffffff'; g.fillRect(0, 4, s, 12);
-});
-
 export const mats = {};
 export function initMaterials() {
-  const common = { vertexColors: true, side: THREE.DoubleSide };
-  mats.solid = new THREE.MeshLambertMaterial({ ...common });
-  mats.win = new THREE.MeshLambertMaterial({ ...common, map: texWin() });
-  mats.brick = new THREE.MeshLambertMaterial({ ...common, map: texBrick() });
-  mats.glass = new THREE.MeshLambertMaterial({ ...common, map: texGlass() });
-  mats.store = new THREE.MeshLambertMaterial({ ...common, map: texStore() });
+  const atlas = makeAtlas();
+  mats.atlas = atlas;
+  mats.solid = new THREE.MeshLambertMaterial({
+    vertexColors: true, side: THREE.DoubleSide, map: atlas.map,
+    emissive: new THREE.Color('#ffffff'), emissiveMap: atlas.emissive, emissiveIntensity: 0,
+  });
+  mats.plain = new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide });
 }
 
 export function makeMesh(geom, shadow = true) {
-  const arr = geom.userData.order.map((k) => mats[k]);
-  const m = new THREE.Mesh(geom, arr);
+  const m = new THREE.Mesh(geom, mats.solid);
   m.castShadow = shadow;
   m.receiveShadow = true;
   return m;

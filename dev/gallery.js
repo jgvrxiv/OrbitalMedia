@@ -1,0 +1,65 @@
+// Galería de desarrollo: ?set=res1|res2|res3|com|ind|pub &night=1 &yaw= &dist=
+import * as THREE from '../vendor/three.module.min.js';
+import { initMaterials, makeMesh, mats } from '../js/geom.js';
+import { buildModel, MODEL_SETS } from '../js/models.js';
+
+const q = new URLSearchParams(location.search);
+initMaterials();
+const canvas = document.getElementById('c');
+const R = new THREE.WebGLRenderer({ canvas, antialias: true });
+R.setPixelRatio(1);
+R.setSize(innerWidth, innerHeight, false);
+R.shadowMap.enabled = true;
+R.outputColorSpace = THREE.SRGBColorSpace;
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(q.get('night') ? '#0b1530' : '#bcdcef');
+const hemi = new THREE.HemisphereLight('#fff', '#8aa070', q.get('night') ? 0.15 : 1.05);
+scene.add(hemi);
+const sun = new THREE.DirectionalLight('#fff4dd', q.get('night') ? 0.1 : 2.1);
+sun.position.set(14, 22, 9); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
+Object.assign(sun.shadow.camera, { left: -20, right: 20, top: 20, bottom: -20, near: 1, far: 80 });
+sun.shadow.bias = -0.0005;
+scene.add(sun);
+if (q.get('night')) mats.solid.emissiveIntensity = 1;
+const items = MODEL_SETS[q.get('set') || 'res1']();
+const cols = +(q.get('cols') || 6);
+const gap = +(q.get('gap') || 4);
+const labels = [];
+items.forEach((it, i) => {
+  const geom = buildModel(it);
+  const m = makeMesh(geom);
+  const x = (i % cols) * gap * (it.w || 1), z = Math.floor(i / cols) * gap * 1.6;
+  m.position.set(x, 0, z);
+  scene.add(m);
+  const g = new THREE.Mesh(new THREE.PlaneGeometry((it.w || 1) * 1.2, (it.w || 1) * 1.2), new THREE.MeshLambertMaterial({ color: '#7c8a6c' }));
+  g.rotation.x = -Math.PI / 2; g.position.set(x, -0.005, z); g.receiveShadow = true; scene.add(g);
+  labels.push({ p: new THREE.Vector3(x, 0, z + 0.75 * (it.w || 1)), t: it.label });
+});
+// una vista por modelo (scissor)
+const rows = Math.ceil(items.length / cols);
+const vw = Math.floor(innerWidth / cols), vh = Math.floor(innerHeight / rows);
+const cam = new THREE.PerspectiveCamera(30, vw / vh, 0.1, 200);
+const yaw = +(q.get('yaw') || 0.6), pitch = +(q.get('pitch') || 0.5);
+R.setScissorTest(true);
+R.setClearColor(scene.background);
+const L = document.getElementById('labels');
+items.forEach((it, i) => {
+  const x = (i % cols) * gap * (it.w || 1), z = Math.floor(i / cols) * gap * 1.6;
+  const geom = buildModel(it);
+  geom.computeBoundingBox();
+  const bb = geom.boundingBox;
+  const h = bb.max.y;
+  const dist = (+(q.get('dist') || 0)) || Math.max(2.6, h * 2.1 + 1.4) * (it.w || 1) ** 0.6;
+  const ty = h * 0.42;
+  cam.position.set(x + Math.sin(yaw) * Math.cos(pitch) * dist, ty + Math.sin(pitch) * dist, z + Math.cos(yaw) * Math.cos(pitch) * dist);
+  cam.lookAt(x, ty, z);
+  const cx = (i % cols) * vw, cy = innerHeight - (Math.floor(i / cols) + 1) * vh;
+  R.setViewport(cx, cy, vw, vh); R.setScissor(cx, cy, vw, vh);
+  R.render(scene, cam);
+  const d = document.createElement('div');
+  d.textContent = it.label;
+  d.style.left = cx + vw / 2 + 'px';
+  d.style.top = innerHeight - cy - vh + 4 + 'px';
+  L.appendChild(d);
+});
+window.__ready = true;
