@@ -81,15 +81,19 @@ vías, buses y carros) sigue leyendo casillas y se ve igual que antes.
   suelo sigan funcionando en 4 direcciones. La vía se dibuja como una **cinta continua a 45°** con su
   perfil; los triángulos sobrantes de la escalera quedan como zona verde.
 - Se detectan cruces diagonal–fila, diagonal–columna y diagonal–diagonal (cuando comparten casilla).
-- Por ahora sólo las vías de una casilla (12 m) pueden ir en diagonal; las anchas siguen ortogonales.
+- Todas las vías pueden ir en diagonal. Una vía de w casillas ocupa una **banda de ⌈w·√2⌉ líneas
+  diagonales** (calle 2, avenida 3, troncal y bulevar 5), y la cinta se dibuja centrada en la banda con
+  su perfil completo. En ladera, todas las casillas de la banda a la misma altura a lo largo quedan
+  niveladas, así que el perfil transversal sigue siendo horizontal.
+- Los edificios cuyo frente da a una diagonal se **giran 45°** para mirar la vía y su modelo se reduce
+  al 74 % para caber en el lote.
 - **Rutas de bus** (`js/netpath.js`): Dijkstra entre nodos del grafo, con costo según largo (√2 por paso
   diagonal) y velocidad del tipo de vía. La ida y la vuelta se calculan por separado para respetar los
   sentidos únicos. Cada bus va por el carril que le corresponde según el perfil (exterior, o el carril
   exclusivo en la troncal).
 - **Carros ambiente**: recorren segmentos en vez de casillas, eligen al azar en cada nodo y respetan los
   sentidos únicos.
-- Pendiente: diagonales de vías anchas, edificios girados 45° frente a las diagonales y cruces con forma
-  propia (hoy el cruce es una casilla cuadrada de pavimento).
+- Pendiente: cruces con forma propia (hoy el cruce es pavimento en las casillas compartidas).
 
 ## 3. Relieve: qué se implementó
 

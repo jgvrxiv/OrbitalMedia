@@ -1,7 +1,7 @@
 // Recorridos sobre el grafo vial: rutas de bus (Dijkstra entre nodos) y caminatas de carros ambiente.
 // Trabaja en coordenadas de casilla (x, y con decimales); quien dibuja las convierte al mundo.
 import { ROADS } from './roads.js';
-import { DIAG, centerOf, segLength } from './roadnet.js';
+import { DIAG, centerOf, segLength, diagLines } from './roadnet.js';
 import { METERS_PER_TILE as MPT } from './units.js';
 
 const key = (p) => p.x + ',' + p.y;
@@ -9,7 +9,13 @@ const key = (p) => p.x + ',' + p.y;
 // Punto del eje geométrico del segmento en la posición s. En vías anchas el eje está entre casillas; cerca
 // de los nodos se acerca al centro de la casilla del nodo para que los empalmes no salten.
 export function segPoint(seg, s) {
-  if (seg.ax === DIAG) return { x: s, y: seg.dy * (s - seg.line) };
+  if (seg.ax === DIAG) {
+    // eje de la banda diagonal, acercándose al centro de la casilla del nodo en los extremos
+    const m = diagLines(ROADS[seg.k].w) - 1;
+    const blend = Math.min(1, Math.max(0, Math.min(s - seg.s0, seg.s1 - s)));
+    const sh = (m / 4) * blend;
+    return { x: s + sh, y: seg.dy * (s - seg.line - sh) };
+  }
   const mid = (seg.offs[0] + seg.offs[seg.offs.length - 1]) / 2;
   const blend = Math.min(1, Math.max(0, Math.min(s - seg.s0, seg.s1 - s)));
   const lat = seg.line + mid * blend;

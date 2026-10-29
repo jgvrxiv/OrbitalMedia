@@ -94,7 +94,7 @@ export function removeStop(stop) {
 
 // ---------- rutas: Dijkstra sobre el grafo vial (la troncal es más rápida para los buses) ----------
 const busAllow = (k) => ROADS[k].bus;
-const busSpeed = (k, seg) => (k === 'troncal' && seg.cIdx >= 0 ? ROADS[k].busSpeed : ROADS[k].speed);
+const busSpeed = (k) => (k === 'troncal' ? ROADS[k].busSpeed : ROADS[k].speed);
 
 // tramo de bus entre dos paradas -> puntos en el mundo (con carril y velocidad de cada tramo)
 function busLeg(a, b) {

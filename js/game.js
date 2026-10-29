@@ -144,10 +144,12 @@ export function refreshOverlay() {
 }
 
 const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _p = new THREE.Vector3(), _s = new THREE.Vector3(), _up = new THREE.Vector3(0, 1, 0);
+const DIAG_SCALE = 0.74; // un lote girado 45° debe caber en su casilla
 function bldMatrix(b, sy = 1) {
-  _q.setFromAxisAngle(_up, ROT[b.rot] ?? 0);
+  const diag = b.da !== undefined && b.da !== null;
+  _q.setFromAxisAngle(_up, diag ? b.da : ROT[b.rot] ?? 0);
   _p.set(tw(b.x) + (b.w - 1) / 2, b.top, tw(b.y) + (b.h - 1) / 2);
-  _s.set(1, sy, 1);
+  _s.set(diag ? DIAG_SCALE : 1, sy, diag ? DIAG_SCALE : 1);
   return _m.compose(_p, _q, _s);
 }
 
@@ -310,7 +312,7 @@ function recalc(b) {
 export function addBuilding(o) {
   const b = {
     id: G.nextId++, kind: o.kind, d: o.d || 1, e: o.e || 1, type: o.type || null, v: o.v ?? Math.floor(rand() * VARIANTS),
-    x: o.x, y: o.y, w: o.w || 1, h: o.h || 1, rot: o.rot ?? 2, key: o.key || null, pop: 0, jobs: 0,
+    x: o.x, y: o.y, w: o.w || 1, h: o.h || 1, rot: o.rot ?? 2, da: o.da ?? null, key: o.key || null, pop: 0, jobs: 0,
   };
   for (let j = 0; j < b.h; j++) for (let i = 0; i < b.w; i++) G.grid[b.y + j][b.x + i].bld = b;
   recalc(b);
@@ -399,21 +401,23 @@ export function buildRoad(plan, k) {
 // Diagonal a 45°: se construyen los tramos continuos de pasos cuyas casillas (centro y unión) caben.
 function buildDiag(plan, k) {
   const { line, dy, s0, s1 } = plan.diag;
-  const at = new Map(plan.map((p) => [p.s, p]));
-  const ok = new Map();
+  // posición a lo largo -> ¿todas las casillas de la banda en esa posición caben?
+  const okAt = new Map();
   let cost = 0, changes = 0;
   for (const p of plan) {
     const c = roadTileCheck(p, k);
-    ok.set(p.s, c.ok);
+    const key = Math.round(p.s * 2);
+    okAt.set(key, (okAt.get(key) ?? true) && c.ok);
     if (c.ok && !c.same) { cost += c.cost; changes++; }
   }
   if (!changes) return false;
+  const fits = (h) => okAt.get(h) !== false; // h = posición × 2
   const runs = [];
   let start = null;
   for (let x = s0; x <= s1; x++) {
-    if (!ok.get(x)) { if (start !== null) runs.push([start, x - 1]); start = null; continue; }
-    if (start === null) start = x;
-    if (x < s1 && !ok.get(x + 0.5)) { runs.push([start, x]); start = null; }
+    const good = fits(2 * x) && (x === s1 || (fits(2 * x + 1) && fits(2 * x + 2)));
+    if (fits(2 * x) && start === null) start = x;
+    if (!good) { if (start !== null) runs.push([start, x]); start = null; }
   }
   if (start !== null) runs.push([start, s1]);
   const real = runs.filter(([a, b]) => b > a);
@@ -421,7 +425,6 @@ function buildDiag(plan, k) {
   if (!spend(cost)) return false;
   for (const [a, b] of real) addSegment(G.net, { k, ax: 3, dy, line, s0: a, s1: b, offs: [0], cIdx: -1 });
   applyNet();
-  void at;
   return true;
 }
 
@@ -548,10 +551,23 @@ export function bulldoze(tiles) {
 // ---------- simulación ----------
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
+// Si el frente del lote da a una vía diagonal, ángulo para que la fachada (+Z del modelo) la mire a 45°.
+function diagFacing(x, y) {
+  const d = G.face[idx(x, y)];
+  if (d < 0) return null;
+  const [dx, dy] = DIRS[d];
+  const r = roadAt(x + dx, y + dy);
+  if (!r || r.ax !== 3) return null;
+  // normales posibles de la diagonal (dirección (1, dy)): (-dy, 1) y (dy, -1); se elige la que apunta a la vía
+  let nx = -r.dy, nz = 1;
+  if (nx * dx + nz * dy < 0) { nx = -nx; nz = -nz; }
+  return Math.atan2(nx, nz);
+}
+
 function spawn(t) {
   const Z = ZONES[t.zone];
   const i = idx(t.x, t.y);
-  const base = { x: t.x, y: t.y, d: Z.d, rot: G.face[i] >= 0 ? G.face[i] : 2 };
+  const base = { x: t.x, y: t.y, d: Z.d, rot: G.face[i] >= 0 ? G.face[i] : 2, da: diagFacing(t.x, t.y) };
   if (Z.k === 'r') {
     let e = estratoOf(G.lv[i]);
     if (e > 1 && rand() < 0.2) e--;
@@ -683,7 +699,7 @@ export function serialize() {
   }
   return {
     v: 3, terrain: S.terrain, seed: G.seed, money: G.money, month: G.month, ticks: G.ticks, net: serializeNet(G.net), zones,
-    blds: G.buildings.map((b) => ({ kind: b.kind, d: b.d, e: b.e, type: b.type, v: b.v, x: b.x, y: b.y, w: b.w, h: b.h, rot: b.rot, key: b.key })),
+    blds: G.buildings.map((b) => ({ kind: b.kind, d: b.d, e: b.e, type: b.type, v: b.v, x: b.x, y: b.y, w: b.w, h: b.h, rot: b.rot, da: b.da, key: b.key })),
   };
 }
 

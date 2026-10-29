@@ -28,8 +28,9 @@ Luego visita http://localhost:8000. El botón **🏙️ Ejemplo** genera una ciu
   destapado, peatonal, calle de 2 carriles, calle de un sentido, calle de 3 carriles, avenida de 4 carriles
   con separador, avenida de 6 carriles, bulevar con ciclorruta, troncal de buses y autopista. Cada vía
   reserva casillas enteras de 12 m; la sobra se dibuja como zona verde. El perfil transversal siempre es
-  horizontal: en ladera el terreno se nivela bajo la vía y sólo sube a lo largo de ella. Las vías de
-  12 m pueden trazarse en **diagonal a 45°** (arrastrando cerca de esa inclinación)
+  horizontal: en ladera el terreno se nivela bajo la vía y sólo sube a lo largo de ella. Todas las vías
+  pueden trazarse en **diagonal a 45°** (arrastrando cerca de esa inclinación) y los edificios de frente
+  a una diagonal se giran para mirarla
   (sin acceso a lotes). La vía define qué densidad puede crecer al frente y cuánta pendiente admite.
 - **Industria**: talleres, cultivos de flores, ladrilleras, bodegas, fábricas textiles, agroindustria,
   plantas y centros logísticos. Produce bienes para el comercio (si faltan se importan, si sobran se

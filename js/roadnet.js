@@ -12,6 +12,9 @@ import { ROADS } from './roads.js';
 //  offs: desplazamientos laterales de cada carril respecto a la línea central (p. ej. [0,1] avenida)
 //  cIdx: índice del carril central exclusivo (troncal) o -1
 export const DIAG = 3;
+// líneas diagonales que ocupa una vía de w casillas (el ancho perpendicular reservado es líneas/√2 casillas)
+export const diagLines = (w) => Math.ceil(w * Math.SQRT2 - 1e-6);
+const diagM = (seg) => diagLines(ROADS[seg.k].w) - 1;
 export function createNet() {
   return { segs: [], nodes: new Map(), nextId: 1 };
 }
@@ -32,10 +35,13 @@ export const cellOf = (seg, s, o) => (seg.ax === 0 ? { x: s, y: seg.line + o } :
 export function cellsOf(seg) {
   const out = [];
   if (seg.ax === DIAG) {
-    for (let s = seg.s0; s <= seg.s1; s++) {
-      const c = centerOf(seg, s);
-      out.push({ x: c.x, y: c.y, li: 0, s, part: 'c' });
-      if (s < seg.s1) out.push({ x: c.x + 1, y: c.y, li: 0, s: s + 0.5, part: 'r' });
+    // banda de m+1 líneas diagonales; cada casilla tiene su posición a lo largo sc = x - k/2
+    const m = diagM(seg);
+    for (let k = 0; k <= m; k++) {
+      for (let x = Math.ceil(seg.s0 + k / 2 - 1e-9); x <= Math.floor(seg.s1 + k / 2 + 1e-9); x++) {
+        const sc = x - k / 2;
+        out.push({ x, y: seg.dy * (x - seg.line - k), li: k, s: sc, part: k === 0 ? 'c' : 'r' });
+      }
     }
     return out;
   }
@@ -89,7 +95,7 @@ export function removeCell(net, x, y) {
       const c = cellsOf(seg).find((p) => p.x === x && p.y === y);
       if (!c) { keep.push(seg); continue; }
       hit = true;
-      if (c.part === 'c') keep.push(...cut(net, seg, c.s, c.s));
+      if (Number.isInteger(c.s)) keep.push(...cut(net, seg, c.s, c.s));
       else {
         // casilla de unión entre dos pasos: el segmento se parte en dos
         const lo = Math.floor(c.s), hi = Math.ceil(c.s);
@@ -193,7 +199,7 @@ export function rasterize(net, grid, N) {
   for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) grid[y][x].road = null;
   const order = [...net.segs].sort((a, b) => ROADS[a.k].rank - ROADS[b.k].rank);
   for (const seg of order) {
-    const nl = seg.ax === DIAG ? 1 : seg.offs.length;
+    const nl = seg.ax === DIAG ? diagM(seg) + 1 : seg.offs.length;
     for (const p of cellsOf(seg)) {
       const { x, y, li } = p;
       if (x < 0 || y < 0 || x >= N || y >= N) continue;
@@ -246,11 +252,18 @@ export function crossLevels(net, N, base) {
   };
   for (const seg of net.segs) {
     if (seg.ax === DIAG) {
-      // cada casilla de la escalera queda plana (sus cuatro esquinas a la altura media)
+      // todas las casillas de la banda con la misma posición a lo largo quedan a la misma altura
+      const groups = new Map();
       for (const p of cellsOf(seg)) {
-        const cs = [[p.x, p.y], [p.x + 1, p.y], [p.x, p.y + 1], [p.x + 1, p.y + 1]].filter(([i, j]) => i >= 0 && j >= 0 && i <= N && j <= N);
+        const g = Math.round(p.s * 2);
+        if (!groups.has(g)) groups.set(g, []);
+        groups.get(g).push(p);
+      }
+      for (const cells of groups.values()) {
+        const cs = [];
+        for (const p of cells) for (const [i, j] of [[p.x, p.y], [p.x + 1, p.y], [p.x, p.y + 1], [p.x + 1, p.y + 1]]) if (i >= 0 && j >= 0 && i <= N && j <= N) cs.push([i, j]);
         if (!cs.length) continue;
-        const h = cs.reduce((s, [i, j]) => s + base(i, j), 0) / cs.length;
+        const h = cs.reduce((a, [i, j]) => a + base(i, j), 0) / cs.length;
         for (const [i, j] of cs) add(i, j, h);
       }
       continue;

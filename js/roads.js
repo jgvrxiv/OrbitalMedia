@@ -76,8 +76,9 @@ for (const R of Object.values(ROADS)) {
 
 const DIRS = [[0, -1], [1, 0], [0, 1], [-1, 0]];
 
-// ¿Este tipo de vía admite tramos diagonales? (fase 2: sólo las de una casilla de ancho)
-export const canDiag = (k) => ROADS[k].w === 1;
+// ¿Este tipo de vía admite tramos diagonales? Todas; las anchas ocupan una banda de varias líneas diagonales.
+export const canDiag = () => true;
+export const diagLines = (w) => Math.ceil(w * Math.SQRT2 - 1e-6);
 
 // Plan de trazado. Recta sobre el eje dominante o, si el arrastre va cerca de 45° y la vía es de una
 // casilla, una diagonal. Devuelve las casillas; las diagonales llevan además plan.diag = { line, dy, s0, s1 }.
@@ -93,10 +94,11 @@ export function roadPlan(a, b, k) {
     const ddy = sx * sy; // al avanzar en X, cuánto cambia Y
     const diag = { line: lo.x - ddy * lo.y, dy: ddy, s0: lo.x, s1: hi.x };
     const out = [];
-    for (let x = lo.x; x <= hi.x; x++) {
-      const y = ddy * (x - diag.line);
-      out.push({ x, y, ax: 3, li: 0, s: x, part: 'c' });
-      if (x < hi.x) out.push({ x: x + 1, y, ax: 3, li: 0, s: x + 0.5, part: 'r' });
+    const m = diagLines(R.w) - 1;
+    for (let k = 0; k <= m; k++) {
+      for (let x = Math.ceil(lo.x + k / 2 - 1e-9); x <= Math.floor(hi.x + k / 2 + 1e-9); x++) {
+        out.push({ x, y: ddy * (x - diag.line - k), ax: 3, li: k, s: x - k / 2, part: k ? 'r' : 'c' });
+      }
     }
     out.diag = diag;
     return out;
@@ -325,8 +327,10 @@ function diagRibbon(B, seg, net) {
   // dirección y normal en el plano (x, z) del mundo
   const dl = Math.SQRT1_2;
   const nx = -seg.dy * dl, nz = dl;
+  const m = diagLines(R.w) - 1;
   const P = (s, u) => {
-    const cx = s - N / 2 + 0.5, cz = seg.dy * (s - seg.line) - N / 2 + 0.5;
+    // eje de la banda: a medio camino entre la primera y la última línea diagonal
+    const cx = s + m / 4 - N / 2 + 0.5, cz = seg.dy * (s - seg.line - m / 4) - N / 2 + 0.5;
     const o = (u - W / 2) / MPT;
     return [cx + nx * o, cz + nz * o];
   };
@@ -365,6 +369,15 @@ function diagRibbon(B, seg, net) {
       if (idx % 2 === 0) quad(s + 0.05, s + 0.3, a.u1 - w, a.u1 + w, L + 0.008, col);
     }
     if (seg.k === 'tierra') for (const o of [0.3, 0.7]) quad(s, s1, W * o - 0.4, W * o + 0.4, L + 0.002, '#7d6342');
+    // palmas o árboles en los separadores
+    if (idx % 4 === 2) {
+      for (const st of lanes) {
+        if (st.t !== 'median') continue;
+        const [px, pz] = P(s + 0.25, (st.u0 + st.u1) / 2);
+        if (st.w >= 5) B.tree(px, pz, 0.34, '#3f8f3a', H(px, pz) + L + 0.04);
+        else B.palm(px, pz, 0.75, false, H(px, pz) + L + 0.04);
+      }
+    }
     // faroles en los andenes cada dos pasos
     if (idx % 4 === 0) {
       for (const st of lanes) {
