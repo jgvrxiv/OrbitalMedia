@@ -414,7 +414,7 @@ const halfWidths = (k) => {
 // del andén y de la calzada salen de cruzar el borde de un brazo con el del brazo siguiente (como un cordón
 // de esquina), en vez de rellenar con la envolvente. Las casillas de los brazos rectos dentro del cruce no
 // se dibujan por casilla.
-function planJunctions(net) {
+export function planJunctions(net) {
   const list = [], covered = new Set(), trim = new Map();
   for (const [key, node] of net.nodes) {
     const segs = node.segs.map((id) => net.byId.get(id)).filter(Boolean);
@@ -476,7 +476,7 @@ const isect = (p, d, q, e) => {
 // radio de las esquinas (en casillas): el del andén es menor que el de la calzada para que queden paralelos
 const RADIUS = { full: 0.22, cw: 0.42 };
 
-function junctionPoly(arms, which) {
+export function junctionPoly(arms, which) {
   const poly = [];
   for (let i = 0; i < arms.length; i++) {
     const a = arms[i], b = arms[(i + 1) % arms.length];
@@ -510,28 +510,47 @@ function junctionPoly(arms, which) {
   return poly;
 }
 
+// plano que mejor se ajusta al terreno bajo el cruce (mínimos cuadrados); las placas del cruce lo comparten
+function fitPlane(pts) {
+  // h = a + b·x + c·z
+  let n = 0, sx = 0, sz = 0, sh = 0, sxx = 0, szz = 0, sxz = 0, sxh = 0, szh = 0;
+  for (const [x, z] of pts) {
+    const h = H(x, z);
+    n++; sx += x; sz += z; sh += h; sxx += x * x; szz += z * z; sxz += x * z; sxh += x * h; szh += z * h;
+  }
+  // resolver el sistema normal 3x3 por Cramer
+  const M = [[n, sx, sz], [sx, sxx, sxz], [sz, sxz, szz]], v = [sh, sxh, szh];
+  const det = (m) => m[0][0] * (m[1][1] * m[2][2] - m[1][2] * m[2][1]) - m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0]) + m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0]);
+  const D = det(M);
+  if (Math.abs(D) < 1e-9) return { a: sh / n, b: 0, c: 0 };
+  const col = (k) => M.map((row, i) => row.map((val, j) => (j === k ? v[i] : val)));
+  return { a: det(col(0)) / D, b: det(col(1)) / D, c: det(col(2)) / D };
+}
+
 function drawJunction(B, j) {
   const L = 0.03;
   const W = (p) => [p[0] - N / 2 + 0.5, p[1] - N / 2 + 0.5];
   const cx = j.arms.reduce((s, a) => s + a.o[0], 0) / j.arms.length, cy = j.arms.reduce((s, a) => s + a.o[1], 0) / j.arms.length;
+  const outer = junctionPoly(j.arms, 'full');
+  const po = outer.map(W);
+  const pl = fitPlane([...po, W([cx, cy])]);
+  const hp = (x, z, lift) => pl.a + pl.b * x + pl.c * z + lift; // altura sobre el plano del cruce
   const fan = (poly, lift, color) => {
     const [wx, wz] = W([cx, cy]);
     const ps = poly.map(W);
     for (let i = 0; i < ps.length; i++) {
       const a = ps[i], b = ps[(i + 1) % ps.length];
-      B.tri([wx, H(wx, wz) + lift, wz], [b[0], H(b[0], b[1]) + lift, b[1]], [a[0], H(a[0], a[1]) + lift, a[1]], color);
+      B.tri([wx, hp(wx, wz, lift), wz], [b[0], hp(b[0], b[1], lift), b[1]], [a[0], hp(a[0], a[1], lift), a[1]], color);
     }
   };
   const k = j.arms.reduce((best, a) => (ROADS[a.seg.k].rank > ROADS[best.seg.k].rank ? a : best)).seg.k;
-  const outer = junctionPoly(j.arms, 'full');
   fan(outer, L + 0.035, COL.walk);
   // bordillo alrededor del andén
-  const po = outer.map(W);
   for (let i = 0; i < po.length; i++) {
     const a = po[i], b = po[(i + 1) % po.length];
-    B.quad([a[0], H(a[0], a[1]) + L, a[1]], [b[0], H(b[0], b[1]) + L, b[1]], [b[0], H(b[0], b[1]) + L + 0.035, b[1]], [a[0], H(a[0], a[1]) + L + 0.035, a[1]], '#9d9a92');
+    B.quad([a[0], hp(a[0], a[1], L), a[1]], [b[0], hp(b[0], b[1], L), b[1]], [b[0], hp(b[0], b[1], L + 0.035), b[1]], [a[0], hp(a[0], a[1], L + 0.035), a[1]], '#9d9a92');
   }
-  fan(junctionPoly(j.arms, 'cw'), L + 0.037, ROADS[k].color);
+  fan(junctionPoly(j.arms, 'cw'), L + 0.04, ROADS[k].color);
   // cebras en cada brazo, justo antes del corte
   for (const a of j.arms) {
     if (a.seg.k === 'tierra' || a.seg.k === 'peatonal') continue;
@@ -540,7 +559,7 @@ function drawJunction(B, j) {
     for (let i = 0; i < cnt; i++) {
       const t0 = -a.hw.cw + (i + 0.2) * ((2 * a.hw.cw) / cnt), t1 = t0 + 0.6 * ((2 * a.hw.cw) / cnt);
       const q = (u, v) => W([a.o[0] + a.d[0] * u + n[0] * v, a.o[1] + a.d[1] * u + n[1] * v]);
-      const y = (p) => [p[0], H(p[0], p[1]) + L + 0.055, p[1]];
+      const y = (p) => [p[0], hp(p[0], p[1], L + 0.047), p[1]];
       B.quad(y(q(a.raw + 0.22, t0)), y(q(a.raw + 0.22, t1)), y(q(a.raw + 0.38, t1)), y(q(a.raw + 0.38, t0)), WHITE);
     }
   }
