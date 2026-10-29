@@ -24,8 +24,11 @@ Luego visita http://localhost:8000. El botón **🏙️ Ejemplo** genera una ciu
 - **Tipología independiente del estrato**: una casa, un edificio, un conjunto residencial o una torre
   existen en varios estratos; el estrato define acabados (ladrillo a la vista y zinc, rejas, pintura,
   balcones, vidrio, piscinas…).
-- **6 tipos de vía** con ancho y usos distintos: camino destapado, calle peatonal, calle, avenida
-  (24 m con separador y palmas), troncal de buses (36 m con carril exclusivo) y autopista
+- **10 perfiles de vía definidos en metros** (andenes, carriles, separadores, ciclorrutas): camino
+  destapado, peatonal, calle de 2 carriles, calle de un sentido, calle de 3 carriles, avenida de 4 carriles
+  con separador, avenida de 6 carriles, bulevar con ciclorruta, troncal de buses y autopista. Cada vía
+  reserva casillas enteras de 12 m; la sobra se dibuja como zona verde. El perfil transversal siempre es
+  horizontal: en ladera el terreno se nivela bajo la vía y sólo sube a lo largo de ella
   (sin acceso a lotes). La vía define qué densidad puede crecer al frente y cuánta pendiente admite.
 - **Industria**: talleres, cultivos de flores, ladrilleras, bodegas, fábricas textiles, agroindustria,
   plantas y centros logísticos. Produce bienes para el comercio (si faltan se importan, si sobran se

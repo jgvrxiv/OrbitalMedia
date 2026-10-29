@@ -1,35 +1,78 @@
-// Tipos de vía (ancho, usos, densidad permitida) y malla de vías que sigue el relieve.
+// Tipos de vía definidos por su PERFIL TRANSVERSAL en metros (andenes, carriles, separadores, ciclorrutas…).
+// Cada vía reserva casillas enteras de 12 m (ancho redondeado hacia arriba); la sobra se dibuja como zona
+// verde. La malla dibuja en cada casilla la franja del perfil que le corresponde.
 import { Builder, CELL, shade } from './geom.js';
 import { N, heightAt } from './scene.js';
+import { METERS_PER_TILE as MPT } from './units.js';
+
+// Franjas del perfil: t = tipo, w = ancho en metros, d = sentido de circulación (carriles)
+//  walk andén · lane carril · bus carril exclusivo · median separador verde · sep separador bajo de concreto
+//  bar barrera (autopista) · verge zona verde · bike ciclorruta · shoulder berma · dirt destapado · paver adoquín
+const P = (t, w, d = 0) => ({ t, w, d });
 
 // dens: densidad máxima que permite en sus frentes (0 = sin acceso a lotes)
 export const ROADS = {
   tierra: {
-    name: 'Camino destapado', icon: '🟫', w: 1, cost: 2500, upkeep: 1, dens: 1, car: true, bus: false, truck: true, speed: 0.6,
-    lv: -0.05, rank: 0, maxSlope: 1.4, color: '#9b7d57', desc: 'Barato, solo baja densidad; sin buses.',
+    name: 'Camino destapado', icon: '🟫', cost: 2500, upkeep: 1, dens: 1, car: true, bus: false, truck: true, speed: 0.6,
+    lv: -0.05, rank: 0, maxSlope: 1.4, color: '#9b7d57', desc: 'Barato; sólo baja densidad y sin buses.',
+    profile: [P('verge', 1.5), P('dirt', 9), P('verge', 1.5)],
   },
   peatonal: {
-    name: 'Calle peatonal', icon: '🚶', w: 1, cost: 9000, upkeep: 3, dens: 2, car: false, bus: false, truck: false, speed: 0,
+    name: 'Calle peatonal', icon: '🚶', cost: 9000, upkeep: 3, dens: 2, car: false, bus: false, truck: false, speed: 0,
     lv: 0.06, rank: 1, maxSlope: 1.6, color: '#cdbfa3', desc: 'Sin carros; sube el valor del suelo. Hasta densidad media.',
+    profile: [P('paver', 12)],
   },
   calle: {
-    name: 'Calle', icon: '🛣️', w: 1, cost: 8000, upkeep: 3, dens: 2, car: true, bus: true, truck: true, speed: 1,
-    lv: 0, rank: 2, maxSlope: 1.1, color: '#3d4147', desc: 'Vía local de doble sentido. Hasta densidad media.',
+    name: 'Calle', icon: '🛣️', cost: 8000, upkeep: 3, dens: 2, car: true, bus: true, truck: true, speed: 1,
+    lv: 0, rank: 2, maxSlope: 1.1, color: '#3d4147', desc: '2 carriles en doble sentido. Hasta densidad media.',
+    profile: [P('walk', 2.5), P('lane', 3.5, -1), P('lane', 3.5, 1), P('walk', 2.5)],
+  },
+  calle1: {
+    name: 'Calle de un sentido', icon: '➡️', cost: 8500, upkeep: 3, dens: 2, car: true, bus: true, truck: true, speed: 1.15,
+    lv: 0, rank: 2.1, maxSlope: 1.1, color: '#3d4147', desc: '2 carriles en un solo sentido. Hasta densidad media.',
+    profile: [P('walk', 2.5), P('lane', 3.5, 1), P('lane', 3.5, 1), P('walk', 2.5)],
+  },
+  calle3: {
+    name: 'Calle de 3 carriles', icon: '🚗', cost: 10000, upkeep: 4, dens: 2, car: true, bus: true, truck: true, speed: 1.25,
+    lv: -0.01, rank: 2.5, maxSlope: 1.0, color: '#3b3f45', desc: '3 carriles con andenes angostos. Hasta densidad media.',
+    profile: [P('walk', 1.5), P('lane', 3, -1), P('lane', 3, 1), P('lane', 3, 1), P('walk', 1.5)],
   },
   avenida: {
-    name: 'Avenida', icon: '🌴', w: 2, cost: 15000, upkeep: 6, dens: 3, car: true, bus: true, truck: true, speed: 1.5,
-    lv: 0.03, rank: 3, maxSlope: 0.9, color: '#383c42', desc: 'Separador con palmas. Permite alta densidad.',
+    name: 'Avenida', icon: '🌴', cost: 15000, upkeep: 6, dens: 3, car: true, bus: true, truck: true, speed: 1.5,
+    lv: 0.03, rank: 3, maxSlope: 0.9, color: '#383c42', desc: '4 carriles con separador y palmas. Permite alta densidad.',
+    profile: [P('walk', 3), P('lane', 3.3, -1), P('lane', 3.3, -1), P('median', 4.8), P('lane', 3.3, 1), P('lane', 3.3, 1), P('walk', 3)],
+  },
+  avenida6: {
+    name: 'Avenida de 6 carriles', icon: '🚙', cost: 17000, upkeep: 7, dens: 3, car: true, bus: true, truck: true, speed: 1.7,
+    lv: 0, rank: 3.2, maxSlope: 0.85, color: '#383c42', desc: '6 carriles con separador angosto. Permite alta densidad.',
+    profile: [P('walk', 2), P('lane', 3.2, -1), P('lane', 3.2, -1), P('lane', 3.2, -1), P('sep', 0.8), P('lane', 3.2, 1), P('lane', 3.2, 1), P('lane', 3.2, 1), P('walk', 2)],
+  },
+  bulevar: {
+    name: 'Bulevar con ciclorruta', icon: '🚲', cost: 24000, upkeep: 9, dens: 3, car: true, bus: true, truck: true, speed: 1.4,
+    lv: 0.07, rank: 3.5, maxSlope: 0.85, color: '#383c42', desc: 'Separador arborizado, ciclorrutas y andenes anchos. Sube el valor del suelo.',
+    profile: [P('walk', 3), P('bike', 2), P('lane', 3.3, -1), P('lane', 3.3, -1), P('median', 6), P('lane', 3.3, 1), P('lane', 3.3, 1), P('bike', 2), P('walk', 3)],
   },
   troncal: {
-    name: 'Troncal de buses', icon: '🚍', w: 3, cost: 19000, upkeep: 8, dens: 3, car: true, bus: true, truck: true, speed: 1.5, busSpeed: 2.2,
-    lv: 0.02, rank: 4, maxSlope: 0.8, color: '#3a3e44', desc: 'Carril exclusivo central (tipo BRT). Buses más rápidos.',
+    name: 'Troncal de buses', icon: '🚍', cost: 19000, upkeep: 8, dens: 3, car: true, bus: true, truck: true, speed: 1.5, busSpeed: 2.2,
+    lv: 0.02, rank: 4, maxSlope: 0.8, color: '#3a3e44', desc: 'Carriles exclusivos centrales (tipo BRT). Buses más rápidos.',
+    profile: [P('walk', 3), P('lane', 3.3, -1), P('lane', 3.3, -1), P('sep', 1), P('bus', 3.5, -1), P('median', 3), P('bus', 3.5, 1), P('sep', 1), P('lane', 3.3, 1), P('lane', 3.3, 1), P('walk', 3)],
   },
   autopista: {
-    name: 'Autopista', icon: '🛤️', w: 2, cost: 24000, upkeep: 10, dens: 0, car: true, bus: true, truck: true, speed: 2.4,
-    lv: -0.08, rank: 5, maxSlope: 0.7, color: '#2f3237', desc: 'Rápida, sin acceso a lotes; ruido baja el valor del suelo.',
+    name: 'Autopista', icon: '🛤️', cost: 24000, upkeep: 10, dens: 0, car: true, bus: true, truck: true, speed: 2.4,
+    lv: -0.08, rank: 5, maxSlope: 0.7, color: '#2f3237', desc: 'Rápida, sin acceso a lotes; el ruido baja el valor del suelo.',
+    profile: [P('bar', 0.5), P('shoulder', 1.5), P('lane', 3.5, -1), P('lane', 3.5, -1), P('bar', 1), P('lane', 3.5, 1), P('lane', 3.5, 1), P('shoulder', 1.5), P('bar', 0.5)],
   },
 };
-export const ROAD_ORDER = ['tierra', 'peatonal', 'calle', 'avenida', 'troncal', 'autopista'];
+export const ROAD_ORDER = ['tierra', 'peatonal', 'calle', 'calle1', 'calle3', 'avenida', 'avenida6', 'bulevar', 'troncal', 'autopista'];
+
+// ancho real (m), casillas reservadas y posición de cada franja dentro del ancho reservado
+for (const R of Object.values(ROADS)) {
+  R.meters = R.profile.reduce((s, p) => s + p.w, 0);
+  R.w = Math.max(1, Math.ceil(R.meters / MPT - 1e-6));
+  R.lanes = R.profile.filter((p) => p.t === 'lane').length;
+  let u = (R.w * MPT - R.meters) / 2;
+  R.strips = R.profile.map((p) => { const s = { ...p, u0: u, u1: u + p.w }; u += p.w; return s; });
+}
 
 const DIRS = [[0, -1], [1, 0], [0, 1], [-1, 0]];
 
@@ -61,84 +104,53 @@ function flat(B, x0, z0, x1, z1, lift, color, cell = null) {
 function curbFace(B, xa, za, xb, zb, lo, hi, color) {
   B.quad([xa, H(xa, za) + lo, za], [xb, H(xb, zb) + lo, zb], [xb, H(xb, zb) + hi, zb], [xa, H(xa, za) + hi, za], color);
 }
-// barra elevada a lo largo de un eje (separadores, barreras)
-function rail(B, x0, z0, x1, z1, lift, h, color) {
-  flat(B, x0, z0, x1, z1, lift + h, color);
-  curbFace(B, x0, z1, x1, z1, lift, lift + h, shade(color, 0.8));
-  curbFace(B, x1, z0, x0, z0, lift, lift + h, shade(color, 0.8));
-  curbFace(B, x1, z1, x1, z0, lift, lift + h, shade(color, 0.8));
-  curbFace(B, x0, z0, x0, z1, lift, lift + h, shade(color, 0.8));
+// bloque elevado (andenes, separadores, barreras)
+function rail(B, x0, z0, x1, z1, lift, h, color, top = null) {
+  flat(B, x0, z0, x1, z1, lift + h, top || color);
+  const sc = shade(color, 0.8);
+  curbFace(B, x0, z1, x1, z1, lift, lift + h, sc);
+  curbFace(B, x1, z0, x0, z0, lift, lift + h, sc);
+  curbFace(B, x1, z1, x1, z0, lift, lift + h, sc);
+  curbFace(B, x0, z0, x0, z1, lift, lift + h, sc);
 }
 
-function lampPost(B, x, z) {
-  const y = H(x, z);
+function lampPost(B, x, z, y0 = 0) {
+  const y = H(x, z) + y0;
   B.box(x, y, z, 0.022, 0.42, 0.022, '#3a3a3a');
   B.box(x, y + 0.42, z, 0.09, 0.02, 0.03, '#3a3a3a');
   B.box(x, y + 0.405, z, 0.06, 0.015, 0.025, '#fff3c4', { pick: () => CELL.SIGN, fl: 1, cw: 0.06, lit: true });
 }
 
+const COL = {
+  walk: '#cbc6ba', verge: '#7fae62', median: '#7aa65a', sep: '#d9d6ce', bar: '#c9c9c4', bike: '#4f9a6a',
+  shoulder: '#45494f', bus: '#9c3b32', dirt: '#a08259', paver: '#d0c3a7',
+};
+const LIFT = { walk: 0.035, median: 0.04, sep: 0.05, bar: 0.08 };
+const YEL = '#f2c94c', WHITE = '#f4f4f0';
+
 export function buildRoadMesh(grid) {
   const B = new Builder(11);
   B.litP = 0;
   const roadAt = (x, y) => (x >= 0 && y >= 0 && x < N && y < N ? grid[y][x].road : null);
-  const SIDE = '#cbc6ba', CURB = '#9d9a92', YEL = '#f2c94c', WHITE = '#f4f4f0';
+  const L = 0.03;
   for (let y = 0; y < N; y++) {
     for (let x = 0; x < N; x++) {
       const t = grid[y][x].road;
       if (!t) continue;
       const R = ROADS[t.k];
-      const x0 = x - N / 2, x1 = x0 + 1, z0 = y - N / 2, z1 = z0 + 1, cx = x0 + 0.5, cz = z0 + 0.5;
+      const x0 = x - N / 2, x1 = x0 + 1, z0 = y - N / 2, z1 = z0 + 1;
       const nb = DIRS.map(([dx, dy]) => roadAt(x + dx, y + dy));
-      const L = 0.03;
-      // superficie
-      let base = R.color;
-      if (t.k === 'troncal' && t.c && t.ax !== 2) base = '#9c3b32';
-      if (t.k === 'peatonal') {
-        for (let i = 0; i < 2; i++) for (let j = 0; j < 2; j++) flat(B, x0 + i / 2, z0 + j / 2, x0 + (i + 1) / 2, z0 + (j + 1) / 2, L, (i + j + x + y) % 2 ? '#d6c9ad' : '#c4b597', CELL.BRICK);
-      } else if (t.k === 'tierra') {
-        flat(B, x0, z0, x1, z1, L - 0.01, ((x * 7 + y * 3) % 5) / 40 > 0.05 ? '#a08259' : '#967652');
-      } else flat(B, x0, z0, x1, z1, L, base);
 
-      // andenes y bordillos donde no hay vía al lado
-      const walk = t.k === 'calle' || t.k === 'avenida' || t.k === 'troncal';
-      nb.forEach((n, d) => {
-        if (n) return;
-        const [dx, dy] = DIRS[d];
-        const w = 0.15;
-        let ex0, ez0, ex1, ez1;
-        if (dx === 0) { ex0 = x0; ex1 = x1; ez0 = dy < 0 ? z0 : z1 - w; ez1 = dy < 0 ? z0 + w : z1; }
-        else { ez0 = z0; ez1 = z1; ex0 = dx < 0 ? x0 : x1 - w; ex1 = dx < 0 ? x0 + w : x1; }
-        if (walk) {
-          flat(B, ex0, ez0, ex1, ez1, L + 0.035, SIDE);
-          if (dx === 0) curbFace(B, ex0, dy < 0 ? ez1 : ez0, ex1, dy < 0 ? ez1 : ez0, L, L + 0.035, CURB);
-          else curbFace(B, dx < 0 ? ex1 : ex0, ez0, dx < 0 ? ex1 : ex0, ez1, L, L + 0.035, CURB);
-          if ((x * 3 + y * 5 + d) % 4 === 0) lampPost(B, (ex0 + ex1) / 2, (ez0 + ez1) / 2);
-        } else if (t.k === 'autopista') {
-          const gx0 = dx === 0 ? x0 : (dx < 0 ? x0 + 0.02 : x1 - 0.05), gx1 = dx === 0 ? x1 : gx0 + 0.03;
-          const gz0 = dy === 0 ? z0 : (dy < 0 ? z0 + 0.02 : z1 - 0.05), gz1 = dy === 0 ? z1 : gz0 + 0.03;
-          rail(B, gx0, gz0, gx1, gz1, L, 0.06, '#b8bcc0');
-          // línea de borde amarilla
-          const lx0 = dx === 0 ? x0 : (dx < 0 ? x0 + 0.08 : x1 - 0.1), lz0 = dy === 0 ? z0 : (dy < 0 ? z0 + 0.08 : z1 - 0.1);
-          flat(B, lx0, lz0, dx === 0 ? x1 : lx0 + 0.02, dy === 0 ? z1 : lz0 + 0.02, L + 0.004, YEL);
-        }
-      });
-
-      // demarcación
-      const dash = (along, color, off = 0, wid = 0.035) => {
-        // dos guiones a lo largo del eje, desplazados 'off' del centro
-        for (const s of [0.12, 0.62]) {
-          if (along === 0) flat(B, x0 + s, cz + off - wid / 2, x0 + s + 0.26, cz + off + wid / 2, L + 0.004, color);
-          else flat(B, cx + off - wid / 2, z0 + s, cx + off + wid / 2, z0 + s + 0.26, L + 0.004, color);
-        }
-      };
+      // ---- cruces: pavimento del tipo dominante y cebras en las bocas ----
       if (t.ax === 2) {
-        // cruce: cebras en bordes que reciben una vía
-        if (t.k !== 'tierra' && t.k !== 'peatonal') {
+        if (t.k === 'peatonal') flat(B, x0, z0, x1, z1, L, COL.paver, CELL.BRICK);
+        else if (t.k === 'tierra') flat(B, x0, z0, x1, z1, L - 0.01, COL.dirt);
+        else {
+          flat(B, x0, z0, x1, z1, L, R.color);
           nb.forEach((n, d) => {
-            if (!n || n.k === 'peatonal' || n.k === 'tierra') return;
+            if (!n || n.k === 'peatonal' || n.k === 'tierra' || n.ax === 2) return;
             const [dx, dy] = DIRS[d];
-            const goes = dx !== 0 ? n.ax === 0 : n.ax === 1;
-            if (!goes) return;
+            if (!(dx !== 0 ? n.ax === 0 : n.ax === 1)) return;
             for (let i = 0; i < 5; i++) {
               const s = 0.1 + i * 0.17;
               if (dx === 0) { const zz = dy < 0 ? z0 + 0.05 : z1 - 0.17; flat(B, x0 + s, zz, x0 + s + 0.09, zz + 0.12, L + 0.004, WHITE); }
@@ -146,53 +158,124 @@ export function buildRoadMesh(grid) {
             }
           });
         }
-      } else {
-        const along = t.ax;
-        // vecinos perpendiculares de la misma vía (carriles internos)
-        const perp = along === 0 ? [nb[0], nb[2]] : [nb[3], nb[1]];
-        const same = perp.map((n) => n && n.k === t.k && n.ax === t.ax);
-        if (t.k === 'calle') dash(along, YEL);
-        else if (t.k === 'tierra') {
-          const c = '#7d6342';
-          for (const o of [-0.18, 0.18]) {
-            if (along === 0) flat(B, x0, cz + o - 0.04, x1, cz + o + 0.04, L - 0.005, c);
-            else flat(B, cx + o - 0.04, z0, cx + o + 0.04, z1, L - 0.005, c);
-          }
-        } else if (t.k === 'avenida' || t.k === 'autopista') {
-          dash(along, WHITE, 0);
-          // separador en el borde compartido (se dibuja desde la casilla "menor")
-          if (same[1]) {
-            const isAv = t.k === 'avenida';
-            const wd = isAv ? 0.11 : 0.04;
-            if (along === 0) rail(B, x0, z1 - wd, x1, z1 + wd, L, isAv ? 0.04 : 0.08, isAv ? '#7aa65a' : '#c9c9c4');
-            else rail(B, x1 - wd, z0, x1 + wd, z1, L, isAv ? 0.04 : 0.08, isAv ? '#7aa65a' : '#c9c9c4');
-            if (isAv && (x + y) % 2 === 0) {
-              const px = along === 0 ? cx : x1, pz = along === 0 ? z1 : cz;
-              B.palm(px, pz, 0.75, false, H(px, pz) + L + 0.04);
+        continue;
+      }
+
+      // ---- tramo: franja del perfil que cae en esta casilla ----
+      const ax = t.ax;
+      let li = t.li ?? 0;
+      if (t.nl !== R.w) {
+        // partidas antiguas (un segmento por carril): contar vecinos del mismo tipo hacia el lado negativo
+        li = 0;
+        for (let k = 1; k < R.w; k++) {
+          const n = ax === 0 ? roadAt(x, y - k) : roadAt(x - k, y);
+          if (n && n.k === t.k && n.ax === ax) li++; else break;
+        }
+      }
+      const along = ax === 0 ? x : y;
+      const base = li * MPT;
+      // vecino lateral fuera del perfil (boca de una vía que llega de lado): ahí no hay andén ni zona verde
+      const outNeg = li === 0 ? (ax === 0 ? nb[0] : nb[3]) : null;
+      const outPos = li === R.w - 1 ? (ax === 0 ? nb[2] : nb[1]) : null;
+      // rectángulo de la franja [ua, ub] (metros, dentro de la casilla)
+      const lat = (ua, ub, lift, color, cell = null, raised = 0, top = null) => {
+        const a = (ua - base) / MPT, b = (ub - base) / MPT;
+        if (ax === 0) { if (raised) rail(B, x0, z0 + a, x1, z0 + b, lift, raised, color, top); else flat(B, x0, z0 + a, x1, z0 + b, lift, color, cell); }
+        else if (raised) rail(B, x0 + a, z0, x0 + b, z1, lift, raised, color, top);
+        else flat(B, x0 + a, z0, x0 + b, z1, lift, color, cell);
+      };
+      // punto a lo largo del eje (s en 0..1 de la casilla) y lateral u (metros)
+      const pt = (s, u) => (ax === 0 ? [x0 + s, z0 + (u - base) / MPT] : [x0 + (u - base) / MPT, z0 + s]);
+      const lineAlong = (u, w, color, dashed) => {
+        if (u < base || u > base + MPT) return;
+        const segs = dashed ? [[0.12, 0.38], [0.62, 0.88]] : [[0, 1]];
+        for (const [s0, s1] of segs) {
+          if (ax === 0) flat(B, x0 + s0, z0 + (u - base) / MPT - w / 2, x0 + s1, z0 + (u - base) / MPT + w / 2, L + 0.004, color);
+          else flat(B, x0 + (u - base) / MPT - w / 2, z0 + s0, x0 + (u - base) / MPT + w / 2, z0 + s1, L + 0.004, color);
+        }
+      };
+
+      // zona verde de relleno (sobra entre el perfil y las casillas reservadas)
+      const first = R.strips[0].u0, last = R.strips[R.strips.length - 1].u1;
+      const fill = (ua, ub, mouth) => {
+        const a = Math.max(ua, base), b = Math.min(ub, base + MPT);
+        if (b - a < 1e-3) return;
+        if (mouth) lat(a, b, L, R.color);
+        else lat(a, b, L - 0.005, COL.verge);
+      };
+      fill(0, first, !!outNeg);
+      fill(last, R.w * MPT, !!outPos);
+
+      const mouthAt = (s) => (s.u0 < MPT * 0.5 && outNeg) || (s.u1 > R.w * MPT - MPT * 0.5 && outPos);
+      for (let i = 0; i < R.strips.length; i++) {
+        const s = R.strips[i];
+        const a = Math.max(s.u0, base), b = Math.min(s.u1, base + MPT);
+        if (b - a < 1e-3) continue;
+        const edge = (s.t === 'walk' || s.t === 'verge' || s.t === 'bike') && mouthAt(s);
+        if (edge) { lat(a, b, L, R.color); continue; }
+        switch (s.t) {
+          case 'lane': case 'shoulder': lat(a, b, L, s.t === 'lane' ? R.color : COL.shoulder); break;
+          case 'bus': lat(a, b, L, COL.bus); break;
+          case 'dirt':
+            lat(a, b, L - 0.01, (along * 7) % 5 > 2 ? '#a08259' : '#967652');
+            for (const o of [0.3, 0.7]) lineAlong(s.u0 + s.w * o, 0.07, '#7d6342', false);
+            break;
+          case 'paver':
+            for (let k = 0; k < 2; k++) {
+              const ua = a + ((b - a) * k) / 2, ub = a + ((b - a) * (k + 1)) / 2;
+              lat(ua, ub, L, (k + along) % 2 ? '#d6c9ad' : '#c4b597', CELL.BRICK);
             }
-          }
-        } else if (t.k === 'troncal') {
-          if (t.c) {
-            // carril exclusivo: bordes blancos y separadores
-            for (const o of [-0.46, 0.46]) {
-              if (along === 0) flat(B, x0, cz + o - 0.015, x1, cz + o + 0.015, L + 0.004, WHITE);
-              else flat(B, cx + o - 0.015, z0, cx + o + 0.015, z1, L + 0.004, WHITE);
-            }
-            for (const side of [0, 1]) {
-              if (!same[side]) continue;
-              if (along === 0) { const zz = side ? z1 : z0; rail(B, x0 + 0.05, zz - 0.03, x1 - 0.05, zz + 0.03, L, 0.05, '#e0ddd5'); }
-              else { const xx = side ? x1 : x0; rail(B, xx - 0.03, z0 + 0.05, xx + 0.03, z1 - 0.05, L, 0.05, '#e0ddd5'); }
-            }
-          } else dash(along, WHITE, 0);
-        } else if (t.k === 'peatonal' && (x + y) % 3 === 0) {
-          // bancas y materas
-          const px = along === 0 ? cx : x0 + 0.18, pz = along === 0 ? z0 + 0.18 : cz;
+            break;
+          case 'bike': lat(a, b, L + 0.002, COL.bike); break;
+          case 'verge': lat(a, b, L - 0.005, COL.verge); break;
+          default: lat(a, b, L, COL[s.t], null, LIFT[s.t], s.t === 'median' ? '#86b765' : null);
+        }
+      }
+
+      // demarcación entre franjas contiguas
+      for (let i = 0; i < R.strips.length - 1; i++) {
+        const a = R.strips[i], b = R.strips[i + 1];
+        const isRoad = (p) => p.t === 'lane' || p.t === 'bus';
+        if (isRoad(a) && isRoad(b)) {
+          if (a.t === 'bus' || b.t === 'bus') lineAlong(a.u1, 0.03, WHITE, false);
+          else if (a.d === b.d) lineAlong(a.u1, 0.025, WHITE, true);
+          else lineAlong(a.u1, R.lanes > 2 ? 0.05 : 0.03, YEL, R.lanes <= 2);
+        }
+        if (a.t === 'shoulder' && isRoad(b)) lineAlong(a.u1, 0.02, YEL, false);
+        if (isRoad(a) && b.t === 'shoulder') lineAlong(a.u1, 0.02, YEL, false);
+        if (a.t === 'bike') lineAlong(a.u1, 0.015, WHITE, false);
+        if (b.t === 'bike') lineAlong(b.u0, 0.015, WHITE, false);
+        if (a.t === 'bus' && b.t !== 'bus' && !isRoad(b)) lineAlong(a.u1, 0.03, WHITE, false);
+        if (b.t === 'bus' && !isRoad(a)) lineAlong(b.u0, 0.03, WHITE, false);
+      }
+
+      // mobiliario: faroles en andenes, palmas y árboles en separadores y zonas verdes, bancas en peatonales
+      for (const s of R.strips) {
+        const mid = (s.u0 + s.u1) / 2;
+        if (mid < base || mid >= base + MPT || mouthAt(s)) continue;
+        if (s.t === 'walk' && along % 3 === 0) { const [px, pz] = pt(0.5, mid); lampPost(B, px, pz, L + 0.035); }
+        if (s.t === 'median' && along % 2 === 0) {
+          const [px, pz] = pt(0.5, mid);
+          if (s.w >= 5) B.tree(px, pz, 0.34, '#3f8f3a', H(px, pz) + L + 0.04);
+          else B.palm(px, pz, 0.75, false, H(px, pz) + L + 0.04);
+        }
+        if (s.t === 'walk' && s.w >= 3 && along % 3 === 1) { const [px, pz] = pt(0.5, mid); B.tree(px, pz, 0.26, '#4a9a40', H(px, pz) + L + 0.035); }
+        if (s.t === 'paver' && along % 3 === 0) {
+          const [px, pz] = pt(0.5, s.u0 + 1.8);
           const h = H(px, pz) + L;
           B.box(px, h, pz, 0.12, 0.08, 0.12, '#9a8f7c', { top: '#6aa84f' });
           B.bush(px, pz, 0.07, '#4d8f3f', h + 0.08);
-          lampPost(B, along === 0 ? cx : x1 - 0.12, along === 0 ? z1 - 0.12 : cz);
+          const [lx, lz] = pt(0.5, s.u1 - 1.2);
+          lampPost(B, lx, lz, L);
         }
       }
+      // árboles en el relleno verde ancho
+      const gl = first - base, gr = base + MPT - last;
+      if (along % 2 === 0) {
+        if (li === 0 && first >= 2 && !outNeg) { const [px, pz] = pt(0.5, first / 2); B.tree(px, pz, 0.26, '#4a9a40', H(px, pz) + L); }
+        if (li === R.w - 1 && R.w * MPT - last >= 2 && !outPos) { const [px, pz] = pt(0.5, (last + R.w * MPT) / 2); B.tree(px, pz, 0.26, '#4a9a40', H(px, pz) + L); }
+      }
+      void gl; void gr;
     }
   }
   return B.build();

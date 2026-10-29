@@ -18,7 +18,8 @@ export const S = {
 };
 
 // ---------------- relieve ----------------
-const HV = new Float32Array((N + 1) * (N + 1)); // alturas en las esquinas de las casillas
+const HV = new Float32Array((N + 1) * (N + 1)); // alturas en las esquinas de las casillas (con vías niveladas)
+const HV0 = new Float32Array((N + 1) * (N + 1)); // terreno original, sin nivelar
 let noiseSeed = 7;
 
 function hash2(ix, iz) {
@@ -57,11 +58,20 @@ function terrainBase(x, z) {
 export function genTerrain(kind = 'valle', seed = 7) {
   S.terrain = kind;
   noiseSeed = seed;
-  for (let j = 0; j <= N; j++) for (let i = 0; i <= N; i++) HV[j * (N + 1) + i] = terrainFn(i - N / 2, j - N / 2);
+  for (let j = 0; j <= N; j++) for (let i = 0; i <= N; i++) HV0[j * (N + 1) + i] = terrainFn(i - N / 2, j - N / 2);
+  HV.set(HV0);
   if (S.ground) rebuildTerrainMesh();
 }
 
 export const hC = (i, j) => HV[j * (N + 1) + i]; // altura de esquina
+export const hC0 = (i, j) => HV0[j * (N + 1) + i]; // altura original de esquina
+
+// Aplica alturas niveladas bajo las vías (Map índice -> altura) y reconstruye la malla del terreno.
+export function applyCornerLevels(levels) {
+  HV.set(HV0);
+  for (const [k, h] of levels) HV[k] = h;
+  if (S.ground) rebuildTerrainMesh();
+}
 export function corners(x, y) {
   return [hC(x, y), hC(x + 1, y), hC(x, y + 1), hC(x + 1, y + 1)];
 }

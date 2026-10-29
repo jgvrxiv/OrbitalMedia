@@ -137,7 +137,8 @@ export function normalize(net) {
   net.nodes = nodes;
 }
 
-// Proyecta el grafo sobre la cuadrícula: escribe tile.road = { k, ax, c, seg } en cada casilla.
+// Proyecta el grafo sobre la cuadrícula: escribe tile.road = { k, ax, c, seg, li, nl } en cada casilla
+// (li = carril/casilla dentro del perfil, nl = casillas del segmento).
 // Donde se cruzan ejes distintos la casilla es un cruce (ax = 2) y gana el tipo de mayor rango.
 export function rasterize(net, grid, N) {
   for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) grid[y][x].road = null;
@@ -149,9 +150,10 @@ export function rasterize(net, grid, N) {
         if (x < 0 || y < 0 || x >= N || y >= N) return;
         const t = grid[y][x];
         const c = li === seg.cIdx;
-        if (!t.road) t.road = { k: seg.k, ax: seg.ax, c, seg: seg.id };
-        else if (t.road.ax !== seg.ax) t.road = { k: ROADS[t.road.k].rank >= ROADS[seg.k].rank ? t.road.k : seg.k, ax: 2, c: false, seg: seg.id };
-        else if (ROADS[seg.k].rank >= ROADS[t.road.k].rank) t.road = { k: seg.k, ax: seg.ax, c, seg: seg.id };
+        const nl = seg.offs.length;
+        if (!t.road) t.road = { k: seg.k, ax: seg.ax, c, seg: seg.id, li, nl };
+        else if (t.road.ax !== seg.ax) t.road = { k: ROADS[t.road.k].rank >= ROADS[seg.k].rank ? t.road.k : seg.k, ax: 2, c: false, seg: seg.id, li: 0, nl: 1 };
+        else if (ROADS[seg.k].rank >= ROADS[t.road.k].rank) t.road = { k: seg.k, ax: seg.ax, c, seg: seg.id, li, nl };
       });
     }
   }
@@ -179,4 +181,37 @@ export function loadNet(arr) {
   for (const [k, ax, line, s0, s1, offs, cIdx] of arr) net.segs.push(newSeg(net, { k, ax, line, s0, s1, offs, cIdx }));
   normalize(net);
   return net;
+}
+
+// Nivelación transversal: bajo cada vía el terreno queda horizontal de lado a lado (sigue la pendiente
+// sólo a lo largo de la vía). Devuelve alturas para las esquinas de casilla afectadas: Map(índice -> altura).
+// base(i, j) es la altura original del terreno en la esquina (i, j).
+export function crossLevels(net, N, base) {
+  const acc = new Map();
+  const add = (i, j, h) => {
+    if (i < 0 || j < 0 || i > N || j > N) return;
+    const k = j * (N + 1) + i;
+    const a = acc.get(k);
+    if (a) { a[0] += h; a[1]++; } else acc.set(k, [h, 1]);
+  };
+  for (const seg of net.segs) {
+    const lat0 = seg.line + seg.offs[0], lat1 = seg.line + seg.offs[seg.offs.length - 1] + 1;
+    for (let b = seg.s0; b <= seg.s1 + 1; b++) {
+      let sum = 0, n = 0;
+      for (let l = lat0; l <= lat1; l++) {
+        const [i, j] = seg.ax === 0 ? [b, l] : [l, b];
+        if (i < 0 || j < 0 || i > N || j > N) continue;
+        sum += base(i, j); n++;
+      }
+      if (!n) continue;
+      const h = sum / n;
+      for (let l = lat0; l <= lat1; l++) {
+        const [i, j] = seg.ax === 0 ? [b, l] : [l, b];
+        add(i, j, h);
+      }
+    }
+  }
+  const out = new Map();
+  for (const [k, [s, n]] of acc) out.set(k, s / n);
+  return out;
 }

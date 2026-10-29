@@ -5,11 +5,11 @@
 //   la cobertura de servicios, el tipo de vía, el comercio cercano y la contaminación.
 // - La demanda R/C/I equilibra vivienda, empleo y bienes (la industria produce, el comercio consume).
 import * as THREE from '../vendor/three.module.min.js';
-import { S, N, tw, Trees, TileLayer, padOf, tileCenterH } from './scene.js';
+import { S, N, tw, Trees, TileLayer, padOf, tileCenterH, applyCornerLevels, hC0 } from './scene.js';
 import { mats, rng, Builder } from './geom.js';
 import { InstPools } from './render.js';
 import { ROADS, buildRoadMesh } from './roads.js';
-import { createNet, lanesOf, addSegment, removeCell, rasterize, netFromTiles, serializeNet, loadNet } from './roadnet.js';
+import { createNet, lanesOf, addSegment, removeCell, rasterize, netFromTiles, serializeNet, loadNet, crossLevels } from './roadnet.js';
 import { buildModel, VARIANTS, typeName } from './models.js';
 import { pickResType, resPop } from './models_res.js';
 import { pickComType, COM_JOBS, COM_TYPES, tierOf } from './models_com.js';
@@ -395,9 +395,19 @@ export function buildRoad(plan, k) {
   return true;
 }
 
+// nivela el terreno bajo las vías (perfil transversal horizontal) y reacomoda los edificios vecinos
+function levelTerrain() {
+  applyCornerLevels(crossLevels(G.net, N, hC0));
+  for (const b of G.buildings) {
+    const top = padOf(b.x, b.y, b.w, b.h).top;
+    if (Math.abs(top - b.top) > 1e-4) { detach(b); attach(b); b.grow = 0.999; }
+  }
+}
+
 // proyecta la red sobre las casillas y actualiza todo lo que depende de las vías
 function applyNet() {
   rasterize(G.net, G.grid, N);
+  levelTerrain();
   for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) { const t = G.grid[y][x]; if (t.road) t.zone = 0; }
   markDirty('all');
   flush();
@@ -655,6 +665,7 @@ export function clearAll() {
     t.road = null; t.zone = 0; t.bld = null;
   }
   G.net = createNet();
+  applyCornerLevels(new Map());
   G.growing.length = 0;
   G.month = 0; G.ticks = 0; G.acc = 0;
   G.dem = { r: 0.4, c: 0, i: 0 };
@@ -669,6 +680,7 @@ export function load(d) {
   // v3 guarda el grafo; las partidas v2 guardaban casillas sueltas y se convierten
   G.net = d.net ? loadNet(d.net) : netFromTiles(d.roads || []);
   rasterize(G.net, G.grid, N);
+  applyCornerLevels(crossLevels(G.net, N, hC0));
   for (const [x, y, z] of d.zones) G.grid[y][x].zone = z;
   for (const b of d.blds) addBuilding(b);
   for (const b of G.buildings) b.grow = 0.999;
