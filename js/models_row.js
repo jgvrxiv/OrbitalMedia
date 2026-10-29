@@ -32,7 +32,11 @@ function reja(B, x0, x1, z, gateX, color = '#2a2a2a') {
 function row(B, e, spec, high) {
   const r = B.r;
   const v = (spec && spec.v) || 0;
-  const n = high ? [2, 3, 2, 3][v % 4] : [3, 2, 4, 3][v % 4];
+  // cuántos frentes caben en 12 m según el estrato: 1 → hasta 4 (muy distintos), 2 → hasta 3, 3 → máximo 2 (parejos)
+  const N_UNITS = high
+    ? { 1: [2, 3, 2, 3], 2: [2, 3, 2, 2], 3: [2, 2, 2, 2] }
+    : { 1: [3, 2, 4, 3], 2: [3, 2, 3, 2], 3: [2, 2, 2, 2] };
+  const n = N_UNITS[Math.min(3, e)][v % 4];
   const D = high ? [0.72, 0.8, 0.62, 0.88][v % 4] : [0.62, 0.74, 0.54, 0.82][v % 4];
   const FL = high ? 0.24 : F;
   const fp = high ? (e >= 3 ? 0.06 : 0) : e <= 1 ? 0 : e === 2 ? r.pick([0, 0.05, 0.08]) : r.pick([0.08, 0.1, 0.12]);
@@ -44,20 +48,30 @@ function row(B, e, spec, high) {
   if (ry > 0.04) B.plane(0, 0.013, (zb - 0.5) / 2, 1, ry, e <= 1 ? '#a89d82' : e === 2 ? '#b3a68a' : '#8fb87a');
   B.box(0, 0, -0.497, 1, 0.09, 0.012, '#cfc8b8'); // muro del fondo del lote (continuo)
 
-  const ws = widths(r, n, 0.992, high ? 0.32 : 0.22);
-  let x0 = -0.496;
+  const ws = e >= 3 ? Array.from({ length: n }, () => 0.992 / n) : widths(r, n, 0.992, high ? 0.32 : 0.22);
+  // decisiones compartidas: en estrato 3 las unidades son casi iguales (mismos pisos, color, techo y toldos);
+  // en estrato 2 se alternan dos colores; en estrato 1 cada unidad es distinta
   const paletteSrc = e <= 2 ? PAL.wall[2] : PAL.wall[3];
+  const sh = {
+    floors: high ? r.int(3, 5) : r.int(2, 3), paint: r.pick(paletteSrc), roof: r(), awn: r.pick(PAL.bright),
+    two: [r.pick(paletteSrc), r.pick(paletteSrc)],
+  };
+  let x0 = -0.496;
   ws.forEach((w, i) => {
     const cx = x0 + w / 2;
-    const floors = high ? r.int(3, e <= 1 ? 4 : 5) + (v % 4 === 1 ? 1 : 0) : e <= 1 ? r.int(1, 3 + (v >= 2 ? 1 : 0)) : e === 2 ? r.int(1, 3) : r.int(2, 3);
+    const floors = e >= 3 ? sh.floors
+      : high ? r.int(3, e <= 1 ? 4 : 5) + (v % 4 === 1 ? 1 : 0)
+        : e <= 1 ? r.int(1, 3 + (v >= 2 ? 1 : 0)) : Math.max(1, sh.floors + r.int(-1, 0));
     const raw = !high && e <= 1 && r() < 0.55 || (high && e <= 1 && r() < 0.5);
-    const rawCol = r.pick(PAL.brick), paint = r.pick(paletteSrc);
+    const rawCol = r.pick(PAL.brick);
+    const paint = e >= 3 ? sh.paint : e === 2 ? sh.two[i % 2] : r.pick(paletteSrc);
     const base = raw ? rawCol : paint;
     const shop = high ? e >= 2 || r() < 0.4 : e <= 2 && r() < 0.14 && w > 0.26;
+    const garageAll = e >= 3 && !high && sh.roof < 0.5; // en estrato 3 ambas casas comparten el mismo esquema
     const cw = Math.min(0.2, Math.max(0.1, w / 2));
     const C = Math.max(1, Math.round((w - 0.004) / cw));
-    const doorCol = r() < 0.5 ? 0 : C - 1;
-    const garageCol = !shop && e >= 3 && C >= 2 && r() < 0.45 ? C - 1 - doorCol : -1;
+    const doorCol = e >= 3 ? (i % 2 ? C - 1 : 0) : r() < 0.5 ? 0 : C - 1; // estrato 3: casas pareadas en espejo
+    const garageCol = !shop && e >= 3 && C >= 2 && (garageAll || r() < 0.45) ? C - 1 - doorCol : -1;
     const topRaw = !high && e <= 1 && floors >= 2 && r() < 0.4; // último piso a medio construir
     const darkDoor = r.pick(['#3a3a3a', '#5a3a22', '#2b4a6b']);
     const H = floors * FL;
@@ -82,7 +96,7 @@ function row(B, e, spec, high) {
     });
     // medianera vista: si esta unidad es más baja que la vecina el muro de la vecina ya se ve; si es más alta se ve el suyo
     // techo
-    const roof = r();
+    const roof = e >= 3 ? sh.roof : r();
     if (!high && e <= 1 && roof < 0.45) {
       B.shed(cx, H, zc, w - 0.004, D, 0.0, 0.07, r.pick(PAL.zinc), 'z-');
     } else if (!high && e >= 3 && roof < 0.45) {
@@ -102,8 +116,8 @@ function row(B, e, spec, high) {
     }
     if (e >= 3 && r() < 0.3 && floors >= 2) acUnit(B, cx + w * 0.2, FL * 1.5, zf);
     if (shop) {
-      awning(B, cx, FL * 0.92, zf, w - 0.02, 0.07, [r.pick(PAL.bright), '#ffffff']);
-      sign(B, cx, FL * 0.98 + 0.03, zf + 0.002, Math.max(0.12, w - 0.06), 0.05, r.pick(PAL.bright), { text: '#fff' });
+      awning(B, cx, FL * 0.92, zf, w - 0.02, 0.07, [e >= 3 ? sh.awn : r.pick(PAL.bright), '#ffffff']);
+      sign(B, cx, FL * 0.98 + 0.03, zf + 0.002, Math.max(0.12, w - 0.06), 0.05, e >= 3 ? sh.awn : r.pick(PAL.bright), { text: '#fff' });
     }
     // antejardín: reja con portón a la altura de la puerta
     if (fp > 0.03 && !shop) {
