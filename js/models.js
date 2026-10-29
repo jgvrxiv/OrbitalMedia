@@ -51,6 +51,12 @@ export const MODEL_SETS = {
     torrePopular: [1, 2, 3], torreBalcones: [3, 5], torreVidrio: [6], torresGemelas: [2, 4, 6], torreEscalonada: [5],
   }),
   com: () => Object.keys(COM_TYPES).flatMap((t) => [1, 3, 6].map((e) => ({ kind: 'com', type: t, e, v: 0, label: `${t} E${e}` }))),
+  ref: () => [
+    ...[['hileraLadrillo', 3], ['visPareadas', 2], ['casaModernaLadrillo', 3], ['casaColonialBlanca', 4], ['casaInglesa', 4], ['casaLadrilloVidrio', 6],
+      ['bloqueLadrillo', 4], ['edificioMiradores', 5], ['bloqueLadrilloAlto', 4], ['torreLadrillo', 5], ['torreCurva', 6]].map(([t, e]) => ({ kind: 'res', type: t, e, v: 0, label: `${t} E${e}` })),
+    { kind: 'com', type: 'torreCorona', e: 6, v: 0, label: 'torreCorona' }, { kind: 'com', type: 'torreEsbelta', e: 6, v: 0, label: 'torreEsbelta' },
+    { kind: 'ind', type: 'bodegasBoveda', e: 3, v: 0, label: 'bodegasBoveda' },
+  ],
   pub: () => Object.keys(PUBLIC).map((t) => ({ kind: 'pub', type: t, w: PUBLIC[t].w, label: PUBLIC[t].name })),
   ind: () => Object.keys(IND_TYPES).flatMap((t) => [0, 1].map((v) => ({ kind: 'ind', type: t, e: 3, v, label: `${t} v${v}` }))),
 };

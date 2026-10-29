@@ -60,6 +60,7 @@ Enter = terminar línea.
 | `js/geom.js` | `Builder`: geometría procedural con un solo material por modelo. |
 | `js/kit.js` | Piezas reutilizables (tanques, rejas, balcones, toldos, ropa tendida, carros…). |
 | `js/models_res.js`, `models_com.js`, `models_ind.js` | Tipologías residenciales, comerciales e industriales. |
+| `js/models_ref.js` | Modelos basados en las fotos de `referencias/` (ladrillo bogotano, casas coloniales e inglesas, torres tipo Salmona, Bacatá y Colpatria, bodegas en bóveda). |
 | `js/buildings.js` | Servicios públicos y modelos de transporte. |
 | `js/roads.js` | Tipos de vía y malla de vías sobre el relieve. |
 | `js/roadnet.js` | Red vial como grafo (segmentos ortogonales y diagonales, nodos) proyectada sobre la cuadrícula. |

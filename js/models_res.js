@@ -1,6 +1,7 @@
 // Modelos residenciales. La TIPOLOGÍA depende de la densidad (baja/media/alta) y el ESTRATO
 // (1-6, según el valor del suelo) define acabados, materiales y entorno. Un conjunto puede ser estrato 2 o 6.
 import { CELL, shade } from './geom.js';
+import { REF_RES, REF_RES_TABLE } from './models_ref.js';
 import {
   F, PAL, lot, path, fence, tank, rebar, parapet, dish, antenna, acUnit, hvac, laundry, balcony, car, pool,
   umbrella, pots, lamp, playground, pergola, columns, plinth, sign, pickW,
@@ -632,6 +633,10 @@ const TABLE = {
     6: [['torreVidrio', 0.5], ['torreEscalonada', 0.3], ['torresGemelas', 0.2]],
   },
 };
+
+// modelos basados en las fotos de referencia
+Object.assign(RES_TYPES, REF_RES);
+for (const [d, byE] of Object.entries(REF_RES_TABLE)) for (const [e, list] of Object.entries(byE)) TABLE[d][e] = [...(TABLE[d][e] || []), ...list];
 
 export function pickResType(d, e, r) {
   return pickW(TABLE[d][e])(r);
