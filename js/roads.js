@@ -445,10 +445,10 @@ function planJunctions(net) {
       if (ta > 0 && tb > 0 && ta < 4 && tb < 4) { a.raw = Math.max(a.raw, ta); b.raw = Math.max(b.raw, tb); }
     }
     for (const a of arms) {
-      if (a.diag) a.cut = a.raw + 0.05;
+      if (a.diag) a.cut = a.raw + 0.45; // espacio para la curva de la esquina
       else {
         // las casillas rectas se dibujan enteras: el corte se lleva al borde de casilla siguiente
-        const kmax = Math.max(0, Math.ceil(a.raw - 0.5 - 1e-6));
+        const kmax = Math.max(0, Math.ceil(a.raw + 0.3 - 0.5 - 1e-6));
         a.cut = kmax + 0.5;
         for (let k = 0; k <= kmax; k++) for (const off of a.seg.offs) {
           const s0 = (a.seg.ax === 0 ? node.x : node.y) + k * a.d[a.seg.ax === 0 ? 0 : 1];
@@ -470,6 +470,9 @@ const isect = (p, d, q, e) => {
   return [p[0] + d[0] * t, p[1] + d[1] * t];
 };
 
+// radio de las esquinas (en casillas): el del andén es menor que el de la calzada para que queden paralelos
+const RADIUS = { full: 0.22, cw: 0.42 };
+
 function junctionPoly(arms, which) {
   const poly = [];
   for (let i = 0; i < arms.length; i++) {
@@ -487,7 +490,18 @@ function junctionPoly(arms, which) {
       // la esquina sólo sirve si queda entre los dos cortes (si no, se unen los cortes directamente)
       const ta = (c[0] - a.o[0]) * a.d[0] + (c[1] - a.o[1]) * a.d[1];
       const tb = (c[0] - b.o[0]) * b.d[0] + (c[1] - b.o[1]) * b.d[1];
-      if (ta < a.cut && tb < b.cut) poly.push(c);
+      if (ta < a.cut && tb < b.cut) {
+        // esquina redondeada: curva entre el borde de a y el de b (radio por tipo de polígono)
+        const R = Math.max(0, Math.min(RADIUS[which], a.cut - ta - 0.02, b.cut - tb - 0.02));
+        if (R < 0.02) poly.push(c);
+        else {
+          const pA = [c[0] + a.d[0] * R, c[1] + a.d[1] * R], pB = [c[0] + b.d[0] * R, c[1] + b.d[1] * R];
+          for (let k = 0; k <= 6; k++) {
+            const t = k / 6, u = 1 - t;
+            poly.push([u * u * pA[0] + 2 * u * t * c[0] + t * t * pB[0], u * u * pA[1] + 2 * u * t * c[1] + t * t * pB[1]]);
+          }
+        }
+      }
     }
   }
   return poly;
@@ -523,8 +537,8 @@ function drawJunction(B, j) {
     for (let i = 0; i < cnt; i++) {
       const t0 = -a.hw.cw + (i + 0.2) * ((2 * a.hw.cw) / cnt), t1 = t0 + 0.6 * ((2 * a.hw.cw) / cnt);
       const q = (u, v) => W([a.o[0] + a.d[0] * u + n[0] * v, a.o[1] + a.d[1] * u + n[1] * v]);
-      const y = (p) => [p[0], H(p[0], p[1]) + L + 0.04, p[1]];
-      B.quad(y(q(a.raw + 0.03, t0)), y(q(a.raw + 0.03, t1)), y(q(a.raw + 0.2, t1)), y(q(a.raw + 0.2, t0)), WHITE);
+      const y = (p) => [p[0], H(p[0], p[1]) + L + 0.055, p[1]];
+      B.quad(y(q(a.raw + 0.22, t0)), y(q(a.raw + 0.22, t1)), y(q(a.raw + 0.38, t1)), y(q(a.raw + 0.38, t0)), WHITE);
     }
   }
 }

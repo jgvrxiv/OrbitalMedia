@@ -139,10 +139,9 @@ Se implementó **relieve real sin terraformación**:
 - **Edificios sobre plataformas**: cada lote se apoya en la esquina más alta y debajo aparece un muro de
   contención hasta la esquina más baja. Así una ladera construida se ve escalonada, como los barrios de
   ladera en Medellín, sin modificar el terreno.
-- **Pendiente máxima por densidad** (desnivel sobre 12 m): alta ≤ 10 %, media ≤ 16 %, baja ≤ 25 % (la
-  vivienda de baja densidad tolera hasta 35 %). **Vías**: calles hasta 20 %, avenidas 10-12 %, troncal 8 %,
-  autopista 6 %; por encima de 20 % y hasta 40 % sólo caben calles peatonales (escaleras). El valle tiene
-  unos 80 m de desnivel, pendientes típicas de 9 % y un escarpe en la ladera occidental de 25-40 %. Hay una capa de información **Pendiente** para verlo.
+- **Pendiente**: sólo limita las vías: calles hasta 20 %, avenidas 10-12 %, troncal 8 %, autopista 6 %;
+  por encima de 20 % y hasta 40 % sólo caben calles peatonales (escaleras). Los edificios se construyen
+  en cualquier pendiente sobre su plataforma.
 - **Metrocable con relieve**: el cable va recto entre estaciones; si el tramo atraviesa la montaña se
   rechaza y se pide una estación intermedia. Las torres miden lo necesario según el terreno.
 - **Vehículos, árboles y cámara** usan la altura bilineal del terreno; la selección con el ratón se hace

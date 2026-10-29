@@ -37,7 +37,7 @@ export function stopOk(type, x, y) {
   const t = tile(x, y);
   if (!t || t.stop) return false;
   if (type === 'bus') return busRoad(t.road) && t.road.k !== 'autopista';
-  return !t.road && !t.bld && padOf(x, y).slope < 0.35;
+  return !t.road && !t.bld;
 }
 
 function stopBase(s) {

@@ -35,8 +35,7 @@ export const ZONES = {
 };
 export const DENS_NAME = ['', 'Baja', 'Media', 'Alta'];
 export const ESTRATO_COLORS = ['#e5484d', '#f08a24', '#f2d024', '#6cc04a', '#2f9bd6', '#9b5de5'];
-// pendiente máxima del lote (desnivel / 12 m) por densidad: 25 %, 16 % y 10 %
-export const MAX_SLOPE = { 1: 0.25, 2: 0.16, 3: 0.1 };
+// la pendiente sólo limita las vías; los edificios se construyen en cualquier ladera sobre su plataforma
 const TAX = [-3, 4, 8, 18, 35, 60];
 const DMULT = { 1: 2.2, 2: 1.2, 3: 1 };
 const TIER_MULT = { 1: 1, 2: 1.3, 3: 1.7 };
@@ -146,7 +145,7 @@ export function refreshOverlay() {
     let c;
     if (mode === 'lv') c = ESTRATO_COLORS[estratoOf(G.lv[i]) - 1];
     else if (mode === 'poll') { if (G.poll[i] < 0.03) continue; c = ramp(G.poll[i], ['#fff3b0', '#ff9f1c', '#7a2e0e']); }
-    else if (mode === 'slope') { const s = padOf(x, y).slope; c = s > MAX_SLOPE[1] ? '#d62828' : s > MAX_SLOPE[2] ? '#f77f00' : s > MAX_SLOPE[3] ? '#fcbf49' : '#90be6d'; }
+    else if (mode === 'slope') { const s = padOf(x, y).slope; c = s > 0.4 ? '#7a1010' : s > 0.2 ? '#d62828' : s > 0.12 ? '#f77f00' : s > 0.08 ? '#fcbf49' : '#90be6d'; }
     else if (mode === 'svc') { let s = 0; for (const a of G.cov) s += a[i]; c = ramp(s / 8, ['#d62828', '#fcbf49', '#2a9d8f']); }
     list.push({ x, y, color: c });
   }
@@ -396,6 +395,12 @@ export function buildRoad(plan, k) {
     valid.push(along);
   }
   if (!changes) return false;
+  if (valid.length) {
+    const dir = ax === 0 ? [1, 0] : [0, 1];
+    const at = (s) => (ax === 0 ? { x: s, y: line } : { x: line, y: s });
+    const bad = junctionRule(at(valid[0]), dir) || junctionRule(at(valid[valid.length - 1]), [-dir[0], -dir[1]]);
+    if (bad) { G.onToast(bad, 'warn'); return false; }
+  }
   if (!spend(cost)) return false;
   // tramos continuos de posiciones válidas -> segmentos del grafo
   const { offs, cIdx } = lanesOf(k);
@@ -408,6 +413,35 @@ export function buildRoad(plan, k) {
   flushRun();
   applyNet();
   return true;
+}
+
+// Reglas de empalme (como en Cities): una vía no puede llegar a un nodo formando menos de MIN_ANGLE con otra
+// vía de ese nodo, ni terminar a una casilla de un cruce donde llega una diagonal (dos cruces casi encimados).
+// p = extremo de la vía nueva; dir = dirección en que la vía sale de ese extremo.
+export const MIN_ANGLE = 40;
+function junctionRule(p, dir) {
+  const net = G.net;
+  const node = net.nodes.get(p.x + ',' + p.y);
+  const dl = Math.hypot(dir[0], dir[1]);
+  if (node) {
+    for (const id of node.segs) {
+      const seg = net.byId.get(id);
+      if (!seg) continue;
+      const atStart = seg.ax === 1 ? seg.s0 === p.y : seg.s0 === p.x;
+      const sd = seg.ax === 0 ? [1, 0] : seg.ax === 1 ? [0, 1] : [1, seg.dy];
+      const out = atStart ? sd : [-sd[0], -sd[1]];
+      const cos = (out[0] * dir[0] + out[1] * dir[1]) / (Math.hypot(out[0], out[1]) * dl);
+      const ang = (Math.acos(Math.max(-1, Math.min(1, cos))) * 180) / Math.PI;
+      if (ang > 1 && ang < MIN_ANGLE) return `Ángulo muy cerrado con otra vía (${Math.round(ang)}°; mínimo ${MIN_ANGLE}°)`;
+    }
+    return null;
+  }
+  for (const n of net.nodes.values()) {
+    if (Math.max(Math.abs(n.x - p.x), Math.abs(n.y - p.y)) !== 1) continue;
+    const hasDiag = n.segs.some((id) => net.byId.get(id)?.ax === 3);
+    if (hasDiag || dir[0] && dir[1]) return 'Muy cerca de otro cruce: empalma en el mismo nodo o aléjate al menos 2 casillas';
+  }
+  return null;
 }
 
 // Diagonal a 45°: se construyen los tramos continuos de pasos cuyas casillas (centro y unión) caben.
@@ -434,6 +468,10 @@ function buildDiag(plan, k) {
   if (start !== null) runs.push([start, s1]);
   const real = runs.filter(([a, b]) => b > a);
   if (!real.length) return false;
+  for (const [a, b] of real) {
+    const bad = junctionRule({ x: a, y: dy * (a - line) }, [1, dy]) || junctionRule({ x: b, y: dy * (b - line) }, [-1, -dy]);
+    if (bad) { G.onToast(bad, 'warn'); return false; }
+  }
   if (!spend(cost)) return false;
   for (const [a, b] of real) addSegment(G.net, { k, ax: 3, dy, line, s0: a, s1: b, offs: [0], cIdx: -1 });
   applyNet();
@@ -480,8 +518,6 @@ export function zoneProblem(x, y, ignoreDemand = false) {
   const a = G.access[idx(x, y)];
   if (!a) return 'Sin vía cercana';
   if (a < Z.d) return a === 1 ? 'Sobre camino destapado sólo crecen casas: pavimenta la vía' : 'Lote de fondo (sin frente a la vía): sólo crecen casas';
-  const s = padOf(x, y).slope;
-  if (s > MAX_SLOPE[Z.d] + (Z.k === 'r' && Z.d === 1 ? 0.1 : 0)) return 'Terreno muy inclinado para esta densidad';
   if (!ignoreDemand && G.dem[Z.k] < -0.2) return 'Poca demanda de ' + ({ r: 'vivienda', c: 'comercio', o: 'oficinas', i: 'industria' }[Z.k]);
   return null;
 }
@@ -519,7 +555,7 @@ export function canPlacePublic(key, x, y) {
   for (let j = 0; j < d.h; j++) { if (isRoad(x - 1, y + j)) sides[3]++; if (isRoad(x + d.w, y + j)) sides[1]++; }
   const best = sides.indexOf(Math.max(...sides));
   const noRoad = sides[best] === 0;
-  const steep = padOf(x, y, d.w, d.h).slope > 0.2;
+  const steep = false; // los edificios se apoyan en plataformas: la pendiente sólo limita las vías
   if (noRoad || steep) { ok = false; tiles.forEach((t) => { t.ok = false; }); }
   return { ok, tiles, noRoad, steep, rot: best };
 }

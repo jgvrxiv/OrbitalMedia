@@ -42,7 +42,7 @@ Luego visita http://localhost:8000. El botón **🏙️ Ejemplo** genera una ciu
 - **Transporte público**: paraderos de bus, estaciones de troncal, Metrocable con torres que se adaptan
   al terreno (si el cable choca con la montaña pide una estación intermedia).
 - **Relieve** tipo valle andino o llano: las vías siguen el terreno, los lotes en ladera se apoyan en
-  plataformas con muro de contención y las laderas empinadas sólo admiten baja densidad.
+  plataformas con muro de contención en cualquier pendiente; la pendiente sólo limita las vías.
 - **Ciclo día/noche** con ventanas iluminadas, avisos y faroles.
 - **Capas de información**: valor del suelo (estrato), servicios, contaminación y pendiente.
 

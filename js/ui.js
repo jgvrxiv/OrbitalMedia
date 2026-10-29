@@ -166,7 +166,7 @@ export function setOverlay(k) {
   const legend = $('#legend');
   if (k === 'lv') legend.innerHTML = '<b>Estrato según valor del suelo</b>' + ESTRATO_COLORS.map((c, i) => `<span><i style="background:${c}"></i>${i + 1}</span>`).join('');
   else if (k === 'poll') legend.innerHTML = '<b>Contaminación</b><span><i style="background:#fff3b0"></i>baja</span><span><i style="background:#ff9f1c"></i>media</span><span><i style="background:#7a2e0e"></i>alta</span>';
-  else if (k === 'slope') legend.innerHTML = '<b>Pendiente</b><span><i style="background:#90be6d"></i>toda densidad</span><span><i style="background:#fcbf49"></i>≤ media</span><span><i style="background:#f77f00"></i>sólo baja</span><span><i style="background:#d62828"></i>muy empinado</span>';
+  else if (k === 'slope') legend.innerHTML = '<b>Pendiente (para vías)</b><span><i style="background:#90be6d"></i>≤ 8 %: todas</span><span><i style="background:#fcbf49"></i>≤ 12 %: avenidas</span><span><i style="background:#f77f00"></i>≤ 20 %: calles</span><span><i style="background:#d62828"></i>≤ 40 %: peatonal</span><span><i style="background:#7a1010"></i>sin vía</span>';
   else if (k === 'svc') legend.innerHTML = '<b>Servicios cercanos</b><span><i style="background:#d62828"></i>pocos</span><span><i style="background:#fcbf49"></i>algunos</span><span><i style="background:#2a9d8f"></i>muchos</span>';
   legend.hidden = !k;
 }
