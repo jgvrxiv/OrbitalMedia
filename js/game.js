@@ -5,7 +5,7 @@
 //   la cobertura de servicios, el tipo de vía, el comercio cercano y la contaminación.
 // - La demanda R/C/I equilibra vivienda, empleo y bienes (la industria produce, el comercio consume).
 import * as THREE from '../vendor/three.module.min.js';
-import { S, N, tw, Trees, TileLayer, padOf } from './scene.js';
+import { S, N, tw, Trees, TileLayer, padOf, tileCenterH } from './scene.js';
 import { mats, rng, Builder } from './geom.js';
 import { InstPools } from './render.js';
 import { ROADS, buildRoadMesh } from './roads.js';
@@ -30,7 +30,7 @@ export const ZONES = {
 export const DENS_NAME = ['', 'Baja', 'Media', 'Alta'];
 export const ESTRATO_COLORS = ['#e5484d', '#f08a24', '#f2d024', '#6cc04a', '#2f9bd6', '#9b5de5'];
 export const MAX_SLOPE = { 1: 0.75, 2: 0.55, 3: 0.45 };
-const TAX = [-4, 5, 12, 30, 60, 105];
+const TAX = [-3, 4, 8, 18, 35, 60];
 const DMULT = { 1: 2.2, 2: 1.2, 3: 1 };
 const TIER_MULT = { 1: 1, 2: 1.3, 3: 1.7 };
 
@@ -261,7 +261,9 @@ function recomputeLandValue() {
       if (v > pos) pos = v;
       if (v < neg) neg = v;
     }
-    G.lv[i] = Math.max(0, Math.min(1, 0.04 + 0.115 * svc + pos + neg + Math.min(0.06, com[i]) - 0.55 * G.poll[i]));
+    // vista desde la loma: pequeño bono por altura
+    const view = Math.min(0.04, Math.max(0, tileCenterH(x, y) - 2) * 0.006);
+    G.lv[i] = Math.max(0, Math.min(1, 0.04 + 0.115 * svc + pos + neg + view + Math.min(0.06, com[i]) - 0.55 * G.poll[i]));
   }
 }
 
@@ -567,8 +569,8 @@ function simulate() {
       for (const c of G.cov) sc += c[i];
       const h = clamp(28 + 7 * sc + (emp - 0.75) * 30 - G.poll[i] * 35, 3, 100);
       hw += h * b.pop; hs += b.pop;
-    } else if (b.kind === 'com') bud.comTax += b.jobs * 22 * TIER_MULT[tierOf(b.e)] * (0.5 + 0.5 * goodsRatio) * (0.6 + 0.4 * clamp(G.dem.c + 1, 0, 1));
-    else if (b.kind === 'ind') bud.indTax += b.jobs * 18;
+    } else if (b.kind === 'com') bud.comTax += b.jobs * 16 * TIER_MULT[tierOf(b.e)] * (0.5 + 0.5 * goodsRatio) * (0.6 + 0.4 * clamp(G.dem.c + 1, 0, 1));
+    else if (b.kind === 'ind') bud.indTax += b.jobs * 14;
     else bud.services += PUBLIC[b.key].upkeep;
   }
   if (comJobs > 0) bud.imports = Math.max(0, goodsNeed - goodsProd) * 4;

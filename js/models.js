@@ -3,6 +3,7 @@ import { Builder } from './geom.js';
 import { RES_TYPES } from './models_res.js';
 import { COM_TYPES } from './models_com.js';
 import { IND_TYPES } from './models_ind.js';
+import { PUBLIC, buildPublic } from './buildings.js';
 
 export const VARIANTS = 4; // variantes por combinación (paletas/disposición)
 const cache = new Map();
@@ -18,6 +19,7 @@ function hash(str) {
 export function buildModel(spec) {
   const key = keyOf(spec);
   if (cache.has(key)) return cache.get(key);
+  if (spec.kind === 'pub') { const g = buildPublic(spec.type); cache.set(key, g); return g; }
   const B = new Builder(hash(key));
   const T = spec.kind === 'res' ? RES_TYPES : spec.kind === 'com' ? COM_TYPES : IND_TYPES;
   T[spec.type].fn(B, spec.e || 1, spec);
@@ -49,5 +51,6 @@ export const MODEL_SETS = {
     torrePopular: [1, 2, 3], torreBalcones: [3, 5], torreVidrio: [6], torresGemelas: [2, 4, 6], torreEscalonada: [5],
   }),
   com: () => Object.keys(COM_TYPES).flatMap((t) => [1, 3, 6].map((e) => ({ kind: 'com', type: t, e, v: 0, label: `${t} E${e}` }))),
+  pub: () => Object.keys(PUBLIC).map((t) => ({ kind: 'pub', type: t, w: PUBLIC[t].w, label: PUBLIC[t].name })),
   ind: () => Object.keys(IND_TYPES).flatMap((t) => [0, 1].map((v) => ({ kind: 'ind', type: t, e: 3, v, label: `${t} v${v}` }))),
 };

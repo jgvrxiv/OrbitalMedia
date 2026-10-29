@@ -15,27 +15,45 @@ export const SERVICES = {
 
 // ---------- SERVICIOS PÚBLICOS ----------
 function genCAI(B) {
-  B.plane(0, 0.012, 0, 0.98, 0.98, '#9aa59f');
-  B.box(0, 0, 0, 0.6, 0.34, 0.5, '#f0e6d2', { tex: 'win', fl: 1, cw: 0.3 });
-  B.box(0, 0.34, 0, 0.66, 0.04, 0.56, '#2e6f4e');
-  B.box(0, 0.19, 0, 0.62, 0.035, 0.52, '#1d4e9a');
-  B.cyl(0.2, 0.38, 0.1, 0.04, 0.06, '#222', 6);
-  B.sphere(0.2, 0.47, 0.1, 0.035, '#e63946');
-  B.sphere(0.2, 0.47, 0.1, 0.02, '#3a86ff', 1.2, 1, 1);
-  B.box(-0.3, 0, 0.36, 0.2, 0.07, 0.08, '#2c2c2c');
-  B.box(-0.32, 0.07, 0.36, 0.1, 0.05, 0.06, '#2c2c2c');
+  B.plane(0, 0.012, 0, 0.98, 0.98, '#b9bcb5');
+  B.plane(0, 0.014, 0.3, 0.98, 0.3, '#6f9f5a');
+  B.box(0, 0, -0.08, 0.6, 0.34, 0.46, '#f4f1ea', { pick: (f, c, F, C, side) => (side === 'front' && c === 1 ? CELL.DOOR_GLASS : CELL.WIN_BIG), fl: 1, cw: 0.2 });
+  B.box(0, 0.0, -0.08, 0.62, 0.06, 0.48, '#2e7d4f', { noTop: true });
+  B.box(0, 0.34, -0.08, 0.7, 0.05, 0.56, '#2e7d4f');
+  B.box(0, 0.39, -0.08, 0.5, 0.02, 0.4, '#e8e8e8');
+  B.box(0, 0.24, 0.155, 0.4, 0.07, 0.012, '#2e7d4f', { pick: () => CELL.SIGN, fl: 1, cw: 0.4, lit: true });
+  B.cyl(0.22, 0.41, -0.2, 0.03, 0.05, '#222', 8);
+  B.sphere(0.2, 0.47, -0.2, 0.022, '#e63946');
+  B.sphere(0.24, 0.47, -0.2, 0.022, '#3a86ff');
+  for (const x of [-0.24, 0.12]) {
+    B.box(x, 0.02, 0.3, 0.2, 0.05, 0.1, '#f2f2f2');
+    B.box(x, 0.035, 0.3, 0.202, 0.02, 0.102, '#2e7d4f', { noTop: true });
+    B.box(x - 0.01, 0.07, 0.3, 0.1, 0.04, 0.09, '#22303c');
+  }
+  B.cyl(-0.42, 0, -0.38, 0.006, 0.5, '#ccc', 4);
+  B.box(-0.38, 0.42, -0.38, 0.08, 0.025, 0.004, '#f7d117');
+  B.box(-0.38, 0.4075, -0.38, 0.08, 0.0125, 0.004, '#1d4e9a');
+  B.box(-0.38, 0.395, -0.38, 0.08, 0.0125, 0.004, '#d62828');
 }
 
 function genBomberos(B) {
   B.plane(0, 0.012, 0, 1.98, 1.98, '#8e9399');
-  B.box(-0.1, 0, -0.4, 1.5, 0.5, 0.9, '#c62828', { tex: 'win', fl: 2, cw: 0.34 });
-  B.box(-0.1, 0.5, -0.4, 1.56, 0.04, 0.96, '#e8e8e8');
-  for (let i = 0; i < 3; i++) B.box(-0.55 + i * 0.45, 0, 0.055, 0.34, 0.3, 0.012, '#2b2b2b');
-  B.box(0.75, 0, -0.5, 0.4, 1.0, 0.4, '#b02020', { tex: 'win', fl: 4, cw: 0.2 });
-  B.box(0.75, 1.0, -0.5, 0.46, 0.05, 0.46, '#e8e8e8');
-  B.box(-0.3, 0.014, 0.55, 0.7, 0.2, 0.3, '#d62828');
-  B.box(-0.3, 0.214, 0.55, 0.7, 0.03, 0.12, '#ffffff');
-  B.box(-0.1, 0.5, 0.15, 0.4, 0.02, 0.02, '#e8e8e8');
+  const red = '#c62828';
+  B.box(-0.1, 0, -0.35, 1.5, 0.52, 1.0, red, {
+    fl: 2, cw: 0.3,
+    pick: (f, c, F, C, side) => (side === 'front' && f === 0 ? (c === C - 1 ? CELL.DOOR : CELL.ROLLER) : side === 'front' ? CELL.WIN_BIG : CELL.WIN_SLIDE),
+  });
+  B.box(-0.1, 0.52, -0.35, 1.56, 0.05, 1.06, '#eeeeee');
+  B.box(-0.1, 0.4, 0.155, 1.0, 0.08, 0.012, '#eeeeee', { pick: () => CELL.SIGN, fl: 1, cw: 1, lit: true });
+  B.box(0.78, 0, -0.55, 0.36, 1.1, 0.36, red, { pick: () => CELL.WIN_SLIDE, fl: 4, cw: 0.18 });
+  B.box(0.78, 1.1, -0.55, 0.42, 0.05, 0.42, '#eeeeee');
+  B.cyl(0.78, 1.15, -0.55, 0.012, 0.3, '#ccc', 4);
+  for (const x of [-0.6, -0.15, 0.3]) {
+    B.box(x, 0.02, 0.5, 0.34, 0.16, 0.16, red);
+    B.box(x - 0.1, 0.1, 0.5, 0.12, 0.08, 0.162, '#22303c', { noTop: true });
+    B.box(x + 0.04, 0.18, 0.5, 0.26, 0.02, 0.04, '#d8d8d8');
+  }
+  B.tree(0.8, 0.8, 0.3);
 }
 
 function genEscuela(B) {
@@ -100,101 +118,147 @@ function genHospital(B) {
 
 function genParque(B) {
   B.plane(0, 0.012, 0, 1.98, 1.98, '#6fbf5a');
-  B.plane(0, 0.02, 0, 0.18, 1.9, '#e0d3a8');
-  B.plane(0, 0.021, 0, 1.9, 0.18, '#e0d3a8');
-  B.cyl(0, 0.02, 0, 0.3, 0.02, '#e0d3a8', 16);
-  B.cyl(0, 0.04, 0, 0.1, 0.08, '#9aa', 10);
-  B.cyl(0, 0.12, 0, 0.07, 0.01, '#4bb3e6', 10);
-  B.palm(-0.55, -0.55, 0.9, true);
-  B.palm(0.55, 0.55, 0.9, true);
-  B.tree(0.6, -0.6, 0.4);
-  B.tree(-0.6, 0.6, 0.4);
-  B.tree(0.8, -0.2, 0.34);
-  B.tree(-0.8, 0.2, 0.34);
-  B.box(-0.3, 0.02, -0.12, 0.2, 0.06, 0.06, '#7a5230');
-  B.box(0.3, 0.02, 0.12, 0.2, 0.06, 0.06, '#7a5230');
-  // toboganes
-  B.box(0.55, 0.02, -0.55, 0.04, 0.2, 0.04, '#e63946');
-  B.shed(0.65, 0.02, -0.55, 0.2, 0.06, 0.02, 0.2, '#ffd23f', 'x-');
+  B.rbox(0, 0.012, 0, 2.5, 0.006, 0.16, '#e0d3a8', Math.PI / 4);
+  B.rbox(0, 0.013, 0, 2.5, 0.006, 0.16, '#e0d3a8', -Math.PI / 4);
+  B.cyl(0, 0.012, 0, 0.36, 0.008, '#e0d3a8', 20);
+  // kiosco
+  B.cyl(0, 0.02, 0, 0.2, 0.03, '#d6cfbf', 12);
+  for (let i = 0; i < 6; i++) { const a = (i / 6) * Math.PI * 2; B.cyl(Math.cos(a) * 0.16, 0.05, Math.sin(a) * 0.16, 0.01, 0.2, '#f4f1ea', 6); }
+  B.cone(0, 0.25, 0, 0.24, 0.12, '#b5523b', 12);
+  // jardineras con flores
+  for (const [x, z, c] of [[-0.6, 0, '#e63946'], [0.6, 0, '#f7b801'], [0, -0.6, '#ff8fab'], [0, 0.6, '#c77dff']]) {
+    B.cyl(x, 0.012, z, 0.14, 0.04, '#9a8f7c', 12);
+    B.cyl(x, 0.052, z, 0.12, 0.006, c, 12);
+  }
+  B.palm(-0.55, -0.55, 1.0, true); B.palm(0.55, 0.55, 1.0, true); B.palm(-0.7, 0.62, 0.9, true);
+  for (const [x, z, h] of [[0.6, -0.6, 0.42], [0.8, -0.25, 0.34], [-0.8, 0.25, 0.36], [-0.3, -0.82, 0.3], [0.3, 0.82, 0.32], [0.85, 0.3, 0.3]]) B.tree(x, z, h);
+  for (const [x, z, ax] of [[-0.3, 0.12, 'x'], [0.3, -0.12, 'x'], [0.12, 0.3, 'z'], [-0.12, -0.3, 'z']]) {
+    if (ax === 'x') { B.box(x, 0.03, z, 0.18, 0.02, 0.05, '#7a5230'); B.box(x, 0.0, z, 0.15, 0.03, 0.03, '#555'); }
+    else { B.box(x, 0.03, z, 0.05, 0.02, 0.18, '#7a5230'); B.box(x, 0.0, z, 0.03, 0.03, 0.15, '#555'); }
+  }
+  // juegos infantiles
+  B.plane(-0.62, 0.016, -0.25, 0.4, 0.3, '#d9a066');
+  B.box(-0.72, 0, -0.25, 0.015, 0.16, 0.015, '#e63946'); B.box(-0.52, 0, -0.25, 0.015, 0.16, 0.015, '#e63946');
+  B.box(-0.62, 0.16, -0.25, 0.22, 0.012, 0.015, '#e63946');
+  B.shed(-0.62, 0.0, -0.12, 0.08, 0.2, 0.0, 0.14, '#f7b801', 'z-', CELL.PLAIN);
+  for (const [x, z] of [[-0.95, -0.95], [0.95, 0.95], [0.95, -0.95], [-0.95, 0.95]]) {
+    B.cyl(x * 0.4, 0, z * 0.4, 0.006, 0.28, '#3a3a3a', 5);
+    B.box(x * 0.4, 0.28, z * 0.4, 0.03, 0.015, 0.03, '#fff3c4', { pick: () => CELL.SIGN, fl: 1, cw: 0.03, lit: true });
+  }
 }
 
 function genPlaza(B) {
   B.plane(0, 0.012, 0, 2.98, 2.98, '#d8cdb8');
-  for (let i = -3; i <= 3; i++) B.plane(i * 0.4, 0.014, 0.4, 0.2, 2.0, i % 2 ? '#cbbf9f' : '#d8cdb8');
-  // iglesia
-  B.box(0, 0, -0.95, 1.1, 0.7, 0.9, '#f7f2e6', { tex: 'win', fl: 1, cw: 0.9 });
-  B.gable(0, 0.7, -0.95, 1.2, 0.3, 1.0, '#a8442a', 'x', { gable: '#f7f2e6' });
-  B.box(-0.55, 0, -0.45, 0.4, 1.3, 0.4, '#f7f2e6', { tex: 'win', fl: 3, cw: 0.4 });
-  B.cone(-0.55, 1.3, -0.45, 0.3, 0.4, '#a8442a', 4);
-  B.box(-0.55, 1.7, -0.45, 0.02, 0.14, 0.02, '#222');
-  B.box(-0.55, 1.76, -0.45, 0.08, 0.02, 0.02, '#222');
-  B.box(0.55, 0, -0.45, 0.4, 0.9, 0.4, '#f7f2e6', { tex: 'win', fl: 2, cw: 0.4 });
-  B.cone(0.55, 0.9, -0.45, 0.3, 0.3, '#a8442a', 4);
-  B.box(0, 0, -0.49, 0.26, 0.4, 0.02, '#5a3a22');
-  // fuente
-  B.cyl(0, 0.014, 0.4, 0.36, 0.1, '#9aa', 16);
-  B.cyl(0, 0.1, 0.4, 0.32, 0.02, '#4bb3e6', 16);
-  B.cyl(0, 0.014, 0.4, 0.06, 0.34, '#9aa', 8, 0.04);
-  B.palm(-1.2, 0.2, 1.0, true);
-  B.palm(1.2, 0.2, 1.0, true);
-  B.palm(-1.2, 1.2, 0.9, true);
-  B.palm(1.2, 1.2, 0.9, true);
-  B.tree(-0.7, 1.2, 0.35);
-  B.tree(0.7, 1.2, 0.35);
+  for (let i = -3; i <= 3; i++) for (let j = -1; j <= 3; j++) if ((i + j) % 2 === 0) B.plane(i * 0.4, 0.014, j * 0.3 + 0.15, 0.4, 0.3, '#cbbf9f');
+  const W = '#f8f4ea', clay = '#a8442a';
+  // catedral: nave + crucero + dos torres
+  B.box(0, 0, -0.9, 1.0, 0.8, 1.1, W, { pick: (f, c, F, C, side) => (side === 'front' ? CELL.PLAIN : CELL.WIN_ARCH), fl: 1, cw: 0.25 });
+  B.gable(0, 0.8, -0.9, 1.08, 0.32, 1.16, clay, 'z', { gable: W });
+  B.box(0, 0, -1.05, 1.5, 0.62, 0.4, W, { pick: () => CELL.WIN_ARCH, fl: 1, cw: 0.25 });
+  B.gable(0, 0.62, -1.05, 1.56, 0.26, 0.46, clay, 'x', { gable: W });
+  B.cyl(0, 0.8, -1.05, 0.2, 0.25, W, 12);
+  B.sphere(0, 1.05, -1.05, 0.2, clay, 1, 0.8, 1, 12);
+  B.box(0, 1.2, -1.05, 0.015, 0.14, 0.015, '#c9a24d');
+  for (const s of [-1, 1]) {
+    const x = s * 0.42;
+    B.box(x, 0, -0.4, 0.3, 1.25, 0.3, W, { pick: (f, c, F, C) => (f >= F - 1 ? CELL.WIN_ARCH : f === 0 ? CELL.PLAIN : CELL.WIN_SHUT), fl: 4, cw: 0.15 });
+    B.box(x, 1.25, -0.4, 0.34, 0.04, 0.34, '#e6dfcf');
+    B.box(x, 1.29, -0.4, 0.24, 0.22, 0.24, W, { pick: () => CELL.WIN_ARCH, fl: 1, cw: 0.12 });
+    B.cone(x, 1.51, -0.4, 0.17, 0.28, clay, 8);
+    B.box(x, 1.79, -0.4, 0.012, 0.12, 0.012, '#c9a24d');
+    B.box(x, 1.85, -0.4, 0.06, 0.012, 0.012, '#c9a24d');
+  }
+  // fachada central con frontón y puerta
+  B.box(0, 0, -0.36, 0.54, 0.9, 0.06, W, { pick: (f, c) => (c === 1 ? CELL.PLAIN : CELL.PLAIN), fl: 1, cw: 0.54 });
+  B.box(0, 0, -0.325, 0.2, 0.36, 0.01, '#6b4a2b');
+  B.cyl(0, 0.62, -0.33, 0.09, 0.01, '#8fb0cc', 12);
+  B.gable(0, 0.9, -0.36, 0.6, 0.18, 0.07, W, 'z', { cell: CELL.PLAIN });
+  B.box(0, 1.0, -0.33, 0.012, 0.16, 0.012, '#c9a24d');
+  // estatua ecuestre
+  B.box(0, 0.012, 0.45, 0.26, 0.24, 0.26, '#cfc6b4');
+  B.box(0, 0.252, 0.45, 0.2, 0.06, 0.08, '#3f5b4a');
+  B.box(0.06, 0.31, 0.45, 0.04, 0.08, 0.04, '#3f5b4a');
+  B.sphere(0.06, 0.4, 0.45, 0.025, '#3f5b4a');
+  B.box(-0.1, 0.28, 0.45, 0.06, 0.06, 0.04, '#3f5b4a');
+  // palmas, bancas y faroles
+  for (const [x, z] of [[-1.2, 0.0], [1.2, 0.0], [-1.2, 1.2], [1.2, 1.2], [-0.6, 1.25], [0.6, 1.25]]) B.palm(x, z, 1.1, true);
+  for (const [x, z] of [[-0.5, 0.45], [0.5, 0.45], [-0.5, 0.9], [0.5, 0.9]]) { B.box(x, 0.03, z, 0.2, 0.02, 0.06, '#7a5230'); B.box(x, 0.0, z, 0.16, 0.03, 0.03, '#444'); }
+  for (const [x, z] of [[-0.85, 0.3], [0.85, 0.3], [-0.85, 1.0], [0.85, 1.0]]) { B.cyl(x, 0, z, 0.008, 0.32, '#2b2b2b', 5); B.sphere(x, 0.33, z, 0.025, '#fff3c4'); }
+  B.tree(-1.2, -1.2, 0.36); B.tree(1.2, -1.2, 0.36);
 }
 
 function genBiblioteca(B) {
   B.plane(0, 0.012, 0, 1.98, 1.98, '#b5b8b0');
-  B.box(0, 0, 0, 1.6, 0.1, 1.6, '#8c8c88');
-  B.rbox(-0.35, 0.1, -0.3, 0.7, 0.9, 0.7, '#2b2b30', 0.4);
-  B.rbox(0.4, 0.1, -0.15, 0.6, 0.65, 0.6, '#35353b', -0.3);
-  B.rbox(0.0, 0.1, 0.5, 0.65, 0.5, 0.5, '#2f2f35', 0.15);
-  B.rbox(-0.35, 0.5, -0.3, 0.72, 0.03, 0.2, '#9fd0e8', 0.4);
-  B.rbox(0.4, 0.4, -0.15, 0.62, 0.03, 0.2, '#9fd0e8', -0.3);
-  B.tree(-0.85, 0.8, 0.3);
+  B.box(0, 0, -0.1, 1.7, 0.12, 1.5, '#9a958a', { top: '#a8a397' });
+  for (let i = 0; i < 4; i++) B.box(0, 0, 0.66 + i * 0.05, 0.8, 0.12 - i * 0.03, 0.05, '#a8a397');
+  const rocks = [[-0.4, -0.35, 0.72, 1.0, 0.68, 0.38, 0.06], [0.42, -0.25, 0.62, 0.78, 0.6, -0.32, -0.05], [0.0, 0.32, 0.6, 0.62, 0.5, 0.16, 0.04]];
+  for (const [x, z, w, h, d, ry, tilt] of rocks) {
+    const g = new THREE.BoxGeometry(w, h, d);
+    B.geo(g, '#2b2b30', [x, 0.12 + h / 2 - 0.04, z], [tilt, ry, -tilt]);
+    g.dispose();
+    const s = new THREE.BoxGeometry(w * 1.01, 0.03, d * 0.4);
+    B.geo(s, '#c8d7e0', [x, 0.12 + h * 0.55, z], [tilt, ry, -tilt]);
+    s.dispose();
+  }
+  B.rbox(0.02, 0.12, 0.0, 0.9, 0.22, 0.3, '#a9cfe0', 0.1);
+  for (const [x, z] of [[-0.85, 0.8], [0.85, 0.8], [0.85, -0.85], [-0.85, -0.85]]) B.tree(x, z, 0.32);
 }
 
 function genCancha(B) {
-  B.plane(0, 0.012, 0, 1.98, 1.98, '#9aa59a');
-  const W = 1.7, D = 1.0;
-  for (let i = 0; i < 6; i++) B.plane(-W / 2 + (i + 0.5) * W / 6, 0.02, 0, W / 6, D, i % 2 ? '#4caf50' : '#43a047');
+  B.plane(0, 0.012, 0, 1.98, 1.98, '#7fae6a');
+  const W = 1.6, D = 1.0;
+  for (let i = 0; i < 8; i++) B.plane(-W / 2 + (i + 0.5) * (W / 8), 0.02, 0, W / 8, D, i % 2 ? '#4caf50' : '#43a047');
   const L = '#ffffff';
-  B.plane(0, 0.022, -D / 2, W, 0.02, L); B.plane(0, 0.022, D / 2, W, 0.02, L);
-  B.plane(-W / 2, 0.022, 0, 0.02, D, L); B.plane(W / 2, 0.022, 0, 0.02, D, L);
-  B.plane(0, 0.022, 0, 0.02, D, L);
-  B.cyl(0, 0.022, 0, 0.14, 0.002, L, 14);
-  B.cyl(0, 0.0225, 0, 0.12, 0.002, '#4caf50', 14);
+  B.plane(0, 0.022, -D / 2, W, 0.018, L); B.plane(0, 0.022, D / 2, W, 0.018, L);
+  B.plane(-W / 2, 0.022, 0, 0.018, D, L); B.plane(W / 2, 0.022, 0, 0.018, D, L);
+  B.plane(0, 0.022, 0, 0.018, D, L);
+  B.cyl(0, 0.022, 0, 0.13, 0.002, L, 16);
+  B.cyl(0, 0.0225, 0, 0.115, 0.002, '#4caf50', 16);
   for (const s of [-1, 1]) {
-    B.box(s * W / 2, 0, 0, 0.03, 0.14, 0.24, '#fff', { noTop: false });
-    B.box(s * (W / 2 + 0.05), 0, 0, 0.02, 0.14, 0.24, '#ddd');
-    B.cyl(s * 0.5, 0, D / 2 + 0.15, 0.01, 0.6, '#555', 4);
-    B.cyl(s * 0.5, 0, -D / 2 - 0.15, 0.01, 0.6, '#555', 4);
+    B.plane(s * (W / 2 - 0.12), 0.0221, 0, 0.018, 0.44, L);
+    B.plane(s * (W / 2 - 0.06), 0.0221, -0.22, 0.12, 0.018, L);
+    B.plane(s * (W / 2 - 0.06), 0.0221, 0.22, 0.12, 0.018, L);
+    B.box(s * W / 2, 0, -0.11, 0.012, 0.12, 0.012, '#fff'); B.box(s * W / 2, 0, 0.11, 0.012, 0.12, 0.012, '#fff');
+    B.box(s * W / 2, 0.12, 0, 0.012, 0.012, 0.23, '#fff');
   }
-  B.box(0, 0.02, 0.78, 1.2, 0.08, 0.08, '#c9a66b');
+  // malla perimetral
+  const fence = (x, z, w, d) => B.box(x, 0, z, w, 0.2, d, '#9aa3a8', { pick: () => CELL.VENT, fl: 1, cw: 0.3 });
+  fence(0, -0.62, 1.84, 0.008); fence(-0.92, 0, 0.008, 1.24); fence(0.92, 0, 0.008, 1.24);
+  // gradería techada
+  for (let i = 0; i < 3; i++) B.box(0, i * 0.05, 0.68 + i * 0.07, 1.2, 0.05, 0.08, ['#d62828', '#f7d117', '#1d4e9a'][i]);
+  B.box(0, 0.32, 0.75, 1.3, 0.02, 0.3, '#cfd2d6');
+  for (const x of [-0.6, 0.6]) B.box(x, 0, 0.88, 0.02, 0.32, 0.02, '#777');
+  for (const [x, z] of [[-0.95, -0.85], [0.95, -0.85]]) { B.cyl(x, 0, z, 0.012, 0.75, '#666', 5); B.box(x, 0.75, z, 0.1, 0.06, 0.03, '#fff3c4', { pick: () => CELL.SIGN, fl: 1, cw: 0.1, lit: true }); }
 }
 
 function genEstadio(B) {
   B.plane(0, 0.012, 0, 2.98, 2.98, '#9aa59a');
-  B.plane(0, 0.03, 0, 1.2, 1.7, '#43a047');
-  B.plane(0, 0.032, 0, 1.2, 0.02, '#fff');
-  B.cyl(0, 0.032, 0, 0.18, 0.002, '#fff', 14);
-  const seat = ['#f7d117', '#1d4e9a', '#d62828'];
-  // gradas
-  B.box(-1.1, 0, 0, 0.5, 0.7, 2.6, '#cfc9bb');
-  B.box(1.1, 0, 0, 0.5, 0.7, 2.6, '#cfc9bb');
-  B.box(0, 0, -1.1, 1.8, 0.7, 0.5, '#cfc9bb');
-  B.box(0, 0, 1.1, 1.8, 0.7, 0.5, '#cfc9bb');
-  for (let i = 0; i < 3; i++) {
-    const h = 0.2 + i * 0.2;
-    B.box(-0.85 + 0.0, 0.0, 0, 0.04, 0.22 + i * 0.16, 2.0, seat[i]);
-    B.box(0.85, 0, 0, 0.04, 0.22 + i * 0.16, 2.0, seat[i]);
-    void h;
+  const PW = 1.3, PD = 1.8;
+  for (let i = 0; i < 9; i++) B.plane(0, 0.03, -PD / 2 + (i + 0.5) * (PD / 9), PW, PD / 9, i % 2 ? '#4caf50' : '#43a047');
+  B.plane(0, 0.032, 0, PW, 0.02, '#fff');
+  B.cyl(0, 0.032, 0, 0.17, 0.002, '#fff', 16);
+  B.cyl(0, 0.0325, 0, 0.15, 0.002, '#4caf50', 16);
+  const seat = ['#d62828', '#f7d117', '#1d4e9a', '#d62828', '#f7d117'];
+  // graderías escalonadas en los 4 lados
+  for (let k = 0; k < 5; k++) {
+    const h = 0.08 + k * 0.1, o = k * 0.1;
+    B.box(-(PW / 2 + 0.06 + o), 0, 0, 0.1, h, PD + 0.12 + 2 * o, seat[k], { top: seat[k] });
+    B.box(PW / 2 + 0.06 + o, 0, 0, 0.1, h, PD + 0.12 + 2 * o, seat[k], { top: seat[k] });
+    B.box(0, 0, -(PD / 2 + 0.06 + o), PW + 0.12 + 2 * o, h, 0.1, seat[k], { top: seat[k] });
+    B.box(0, 0, PD / 2 + 0.06 + o, PW + 0.12 + 2 * o, h, 0.1, seat[k], { top: seat[k] });
   }
-  B.box(-1.18, 0.7, 0, 0.7, 0.05, 2.7, '#e8e8e8');
-  B.box(1.18, 0.7, 0, 0.7, 0.05, 2.7, '#e8e8e8');
-  for (const [x, z] of [[-1.35, -1.35], [1.35, -1.35], [-1.35, 1.35], [1.35, 1.35]]) {
-    B.cyl(x, 0, z, 0.03, 1.2, '#999', 5);
-    B.box(x, 1.2, z, 0.16, 0.1, 0.16, '#fffbd0');
+  // fachada exterior
+  const ow = PW + 1.2, od = PD + 1.2;
+  const wall = (x, z, w, d) => B.box(x, 0, z, w, 0.58, d, '#e6e1d6', { pick: (f, c) => (c % 2 ? CELL.PANEL : CELL.VENT), fl: 2, cw: 0.25 });
+  wall(0, -od / 2, ow, 0.05); wall(0, od / 2, ow, 0.05); wall(-ow / 2, 0, 0.05, od); wall(ow / 2, 0, 0.05, od);
+  // cubiertas sobre las tribunas laterales
+  for (const s of [-1, 1]) {
+    B.box(s * (ow / 2 - 0.3), 0.66, 0, 0.7, 0.03, od - 0.2, '#f2f2f2');
+    for (const z of [-0.8, 0, 0.8]) B.box(s * (ow / 2 - 0.03), 0.58, z, 0.03, 0.1, 0.03, '#999');
+  }
+  for (const [x, z] of [[-1.4, -1.4], [1.4, -1.4], [-1.4, 1.4], [1.4, 1.4]]) {
+    B.box(x, 0, z, 0.05, 1.5, 0.05, '#8a8a8a');
+    B.rbox(x, 1.5, z, 0.22, 0.14, 0.03, '#fff3c4', Math.atan2(x, z));
   }
 }
 
@@ -212,18 +276,18 @@ function genMercado(B) {
 }
 
 export const PUBLIC = {
-  cai: { name: 'CAI de Policía', icon: '🚓', w: 1, h: 1, cost: 150000, upkeep: 1500, cat: 'seguridad', radius: 9, jobs: 12, gen: genCAI, desc: 'Seguridad en el barrio.' },
-  bomberos: { name: 'Estación de Bomberos', icon: '🚒', w: 2, h: 2, cost: 300000, upkeep: 2500, cat: 'bomberos', radius: 13, jobs: 24, gen: genBomberos, desc: 'Protección contra incendios.' },
-  escuela: { name: 'Colegio', icon: '🏫', w: 2, h: 2, cost: 350000, upkeep: 2250, cat: 'educacion', radius: 11, jobs: 30, gen: genEscuela, desc: 'Educación básica y media.' },
-  universidad: { name: 'Universidad', icon: '🎓', w: 3, h: 3, cost: 1500000, upkeep: 8750, cat: 'educacion', radius: 18, jobs: 90, gen: genUniversidad, desc: 'Educación superior; gran radio.' },
-  clinica: { name: 'Centro de Salud', icon: '🏥', w: 2, h: 2, cost: 450000, upkeep: 3000, cat: 'salud', radius: 12, jobs: 30, gen: genClinica, desc: 'Atención primaria.' },
-  hospital: { name: 'Hospital', icon: '🚑', w: 3, h: 3, cost: 1800000, upkeep: 11250, cat: 'salud', radius: 18, jobs: 110, gen: genHospital, desc: 'Atención de alta complejidad.' },
-  parque: { name: 'Parque', icon: '🌳', w: 2, h: 2, cost: 120000, upkeep: 500, cat: 'recreacion', radius: 9, jobs: 4, gen: genParque, desc: 'Palmas de cera y zonas verdes.' },
-  cancha: { name: 'Cancha de Fútbol', icon: '⚽', w: 2, h: 2, cost: 150000, upkeep: 375, cat: 'recreacion', radius: 8, jobs: 2, gen: genCancha, desc: 'El potrero del barrio.' },
-  estadio: { name: 'Estadio', icon: '🏟️', w: 3, h: 3, cost: 1600000, upkeep: 7500, cat: 'recreacion', radius: 15, jobs: 60, gen: genEstadio, desc: 'Fútbol para toda la ciudad.' },
-  plaza: { name: 'Plaza e Iglesia', icon: '⛪', w: 3, h: 3, cost: 400000, upkeep: 750, cat: 'cultura', radius: 12, jobs: 10, gen: genPlaza, desc: 'Plaza principal con iglesia.' },
-  biblioteca: { name: 'Biblioteca Parque', icon: '📚', w: 2, h: 2, cost: 500000, upkeep: 1500, cat: 'cultura', radius: 12, jobs: 15, gen: genBiblioteca, desc: 'Inspirada en las bibliotecas de Medellín.' },
-  mercado: { name: 'Plaza de Mercado', icon: '🧺', w: 2, h: 2, cost: 350000, upkeep: 1250, cat: 'mercado', radius: 12, jobs: 40, gen: genMercado, desc: 'Frutas, verduras y empleo local.' },
+  cai: { name: 'CAI de Policía', icon: '🚓', w: 1, h: 1, cost: 150000, upkeep: 2250, cat: 'seguridad', radius: 9, jobs: 12, gen: genCAI, desc: 'Seguridad en el barrio.' },
+  bomberos: { name: 'Estación de Bomberos', icon: '🚒', w: 2, h: 2, cost: 300000, upkeep: 3750, cat: 'bomberos', radius: 13, jobs: 24, gen: genBomberos, desc: 'Protección contra incendios.' },
+  escuela: { name: 'Colegio', icon: '🏫', w: 2, h: 2, cost: 350000, upkeep: 3375, cat: 'educacion', radius: 11, jobs: 30, gen: genEscuela, desc: 'Educación básica y media.' },
+  universidad: { name: 'Universidad', icon: '🎓', w: 3, h: 3, cost: 1500000, upkeep: 13125, cat: 'educacion', radius: 18, jobs: 90, gen: genUniversidad, desc: 'Educación superior; gran radio.' },
+  clinica: { name: 'Centro de Salud', icon: '🏥', w: 2, h: 2, cost: 450000, upkeep: 4500, cat: 'salud', radius: 12, jobs: 30, gen: genClinica, desc: 'Atención primaria.' },
+  hospital: { name: 'Hospital', icon: '🚑', w: 3, h: 3, cost: 1800000, upkeep: 16875, cat: 'salud', radius: 18, jobs: 110, gen: genHospital, desc: 'Atención de alta complejidad.' },
+  parque: { name: 'Parque', icon: '🌳', w: 2, h: 2, cost: 120000, upkeep: 750, cat: 'recreacion', radius: 9, jobs: 4, gen: genParque, desc: 'Palmas de cera y zonas verdes.' },
+  cancha: { name: 'Cancha de Fútbol', icon: '⚽', w: 2, h: 2, cost: 150000, upkeep: 562, cat: 'recreacion', radius: 8, jobs: 2, gen: genCancha, desc: 'El potrero del barrio.' },
+  estadio: { name: 'Estadio', icon: '🏟️', w: 3, h: 3, cost: 1600000, upkeep: 11250, cat: 'recreacion', radius: 15, jobs: 60, gen: genEstadio, desc: 'Fútbol para toda la ciudad.' },
+  plaza: { name: 'Plaza e Iglesia', icon: '⛪', w: 3, h: 3, cost: 400000, upkeep: 1125, cat: 'cultura', radius: 12, jobs: 10, gen: genPlaza, desc: 'Plaza principal con iglesia.' },
+  biblioteca: { name: 'Biblioteca Parque', icon: '📚', w: 2, h: 2, cost: 500000, upkeep: 2250, cat: 'cultura', radius: 12, jobs: 15, gen: genBiblioteca, desc: 'Inspirada en las bibliotecas de Medellín.' },
+  mercado: { name: 'Plaza de Mercado', icon: '🧺', w: 2, h: 2, cost: 350000, upkeep: 1875, cat: 'mercado', radius: 12, jobs: 40, gen: genMercado, desc: 'Frutas, verduras y empleo local.' },
 };
 
 export function buildPublic(key) {
