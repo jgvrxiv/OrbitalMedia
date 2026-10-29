@@ -3,70 +3,200 @@
   "nombre": "Elecciones regionales 2027 (nombres que suenan)",
   "cargo": "Alcaldía de Bogotá",
   "fecha": "2027-10",
-  "aviso": "BORRADOR. Ninguna candidatura está confirmada: son nombres que suenan en prensa (oct. 2026). Las posiciones cargadas son una estimación editorial a partir de su trayectoria conocida y están pendientes de verificar con fuente. Si un aspirante no tiene posición pública conocida en un tema, ese tema no cuenta para él.",
+  "aviso": "BORRADOR. Ninguna candidatura está confirmada: son nombres que suenan en prensa (oct. 2026). Cada posición enlaza a una nota de prensa sobre declaraciones o decisiones del aspirante, casi todas de 2019 a 2025, y la valoración de -2 a 2 es editorial. Si un aspirante no tiene posición pública conocida en un tema, ese tema no cuenta para él.",
   "actualizado": "2026-10-29",
   "preguntas": [
-    { "id": "metro-subterraneo", "tema": "Movilidad", "texto": "La primera línea del Metro debió ser subterránea y no elevada." },
-    { "id": "septima-tm", "tema": "Movilidad", "texto": "La carrera Séptima debería tener TransMilenio." },
-    { "id": "van-der-hammen", "tema": "Ambiente", "texto": "Se debería permitir urbanizar parte de la reserva Thomas van der Hammen." },
-    { "id": "pie-fuerza", "tema": "Seguridad", "texto": "La prioridad en seguridad es más policías y más presencia de fuerza pública en las calles." },
-    { "id": "cobro-congestion", "tema": "Movilidad", "texto": "Bogotá debería cobrar por circular en zonas congestionadas." },
-    { "id": "densificacion", "tema": "Urbanismo", "texto": "La ciudad debe crecer más hacia arriba (edificios altos) que hacia los bordes." },
-    { "id": "ventas-informales", "tema": "Espacio público", "texto": "Hay que recuperar el espacio público aunque implique retirar vendedores informales." },
-    { "id": "cupo-endeudamiento", "tema": "Finanzas", "texto": "El Distrito debería endeudarse más para acelerar obras grandes." },
-    { "id": "gobierno-nacional", "tema": "Política", "texto": "La Alcaldía debe alinearse con el Gobierno nacional del Pacto Histórico." },
-    { "id": "ciclovias", "tema": "Movilidad", "texto": "Hay que seguir ampliando las ciclorrutas aunque se quiten carriles a los carros." }
+    {
+      "id": "metro-subterraneo",
+      "tema": "Movilidad",
+      "texto": "La primera línea del Metro debió ser subterránea y no elevada."
+    },
+    {
+      "id": "septima-tm",
+      "tema": "Movilidad",
+      "texto": "La carrera Séptima debería tener TransMilenio."
+    },
+    {
+      "id": "van-der-hammen",
+      "tema": "Ambiente",
+      "texto": "Se debería permitir urbanizar parte de la reserva Thomas van der Hammen."
+    },
+    {
+      "id": "pie-fuerza",
+      "tema": "Seguridad",
+      "texto": "La prioridad en seguridad es más policías y más presencia de fuerza pública en las calles."
+    },
+    {
+      "id": "cobro-congestion",
+      "tema": "Movilidad",
+      "texto": "Bogotá debería cobrar por circular en zonas congestionadas."
+    },
+    {
+      "id": "densificacion",
+      "tema": "Urbanismo",
+      "texto": "La ciudad debe crecer más hacia arriba (edificios altos) que hacia los bordes."
+    },
+    {
+      "id": "ventas-informales",
+      "tema": "Espacio público",
+      "texto": "Hay que recuperar el espacio público aunque implique retirar vendedores informales."
+    },
+    {
+      "id": "cupo-endeudamiento",
+      "tema": "Finanzas",
+      "texto": "El Distrito debería endeudarse más para acelerar obras grandes."
+    },
+    {
+      "id": "gobierno-nacional",
+      "tema": "Política",
+      "texto": "La Alcaldía debe alinearse con el Gobierno nacional del Pacto Histórico."
+    },
+    {
+      "id": "ciclovias",
+      "tema": "Movilidad",
+      "texto": "Hay que seguir ampliando las ciclorrutas aunque se quiten carriles a los carros."
+    }
   ],
   "candidatos": [
     {
-      "id": "claudia-lopez", "nombre": "Claudia López", "partido": "Exalcaldesa (2020-2023)", "color": "#3bb273",
-      "respuestas": { "metro-subterraneo": -1, "septima-tm": -1, "van-der-hammen": -2, "cobro-congestion": 1, "ciclovias": 2, "gobierno-nacional": -1 },
-      "fuentes": {}
+      "id": "claudia-lopez",
+      "nombre": "Claudia López",
+      "partido": "Exalcaldesa (2020-2023)",
+      "color": "#3bb273",
+      "respuestas": {
+        "metro-subterraneo": -1,
+        "septima-tm": -1,
+        "van-der-hammen": -1,
+        "cobro-congestion": 1,
+        "ciclovias": 2
+      },
+      "fuentes": {
+        "metro-subterraneo": "https://www.larepublica.co/economia/metro-de-bogota-claudia-lopez-respalda-decision-del-alcalde-carlos-galan-3824165",
+        "septima-tm": "https://www.noticiascaracol.com/colombia/bogota/no-sean-amargados-claudia-lopez-a-quienes-dicen-que-la-septima-sera-una-troncal-disfrazada-de-tm",
+        "van-der-hammen": "https://www.bluradio.com/blu360/bogota/claudia-lopez-vs-muhamad-por-van-der-hammen-ministra-anuncia-posible-apelacion-a-decision-de-car-rg10",
+        "cobro-congestion": "https://www.eltiempo.com/bogota/por-que-bogota-le-sigue-diciendo-no-a-los-cobros-por-descongestion-mientras-grandes-ciudades-implementan-el-modelo-3422331",
+        "ciclovias": "https://www.eltiempo.com/bogota/bogota-criticas-por-ciclorruta-de-la-carrera-septima-que-quito-espacio-a-los-carros-535597"
+      }
     },
     {
-      "id": "enrique-penalosa", "nombre": "Enrique Peñalosa", "partido": "Exalcalde (1998-2000, 2016-2019)", "color": "#2e86ab",
-      "respuestas": { "metro-subterraneo": -2, "septima-tm": 2, "van-der-hammen": 2, "densificacion": 2, "ventas-informales": 2, "cobro-congestion": 2, "ciclovias": 2, "gobierno-nacional": -2 },
-      "fuentes": {}
+      "id": "enrique-penalosa",
+      "nombre": "Enrique Peñalosa",
+      "partido": "Exalcalde (1998-2000, 2016-2019)",
+      "color": "#2e86ab",
+      "respuestas": {
+        "metro-subterraneo": -2,
+        "septima-tm": 2,
+        "van-der-hammen": 2,
+        "cobro-congestion": 2,
+        "ciclovias": 1,
+        "gobierno-nacional": -2
+      },
+      "fuentes": {
+        "metro-subterraneo": "https://www.semana.com/politica/articulo/enrique-penalosa-arremete-contra-gustavo-petro-por-pulla-contra-el-metro-elevado-de-bogota-solo-habla-paja-y-atrasa-al-pais/202436/",
+        "septima-tm": "https://bogota.gov.co/mi-ciudad/si-no-se-hace-transmilenio-7-la-va-estar-bloqueada-por-anos",
+        "van-der-hammen": "https://www.elespectador.com/bogota/distrito-da-otro-paso-para-su-idea-de-urbanizar-la-reserva-van-der-hammen-article-695093/",
+        "cobro-congestion": "https://www.lafm.com.co/bogota/penalosa-cobro-por-congestion-costaria-cada-ciudadano-cerca-de-4-millones",
+        "ciclovias": "https://bogota.gov.co/mi-ciudad/apertura-del-xiii-seminario-internacional-de-seguridad-vial",
+        "gobierno-nacional": "https://www.publimetro.co/bogota/2025/05/25/no-saben-gobernar-pero-si-organizar-paros-penalosa-arremete-contra-petro-y-bolivar-por-promesas-incumplidas/"
+      }
     },
     {
-      "id": "juan-daniel-oviedo", "nombre": "Juan Daniel Oviedo", "partido": "Exconcejal, exdirector del DANE", "color": "#f3a712",
-      "respuestas": { "gobierno-nacional": -1 },
-      "fuentes": {}
+      "id": "juan-daniel-oviedo",
+      "nombre": "Juan Daniel Oviedo",
+      "partido": "Exconcejal, exdirector del DANE",
+      "color": "#f3a712",
+      "respuestas": {
+        "metro-subterraneo": -1,
+        "cobro-congestion": 2,
+        "pie-fuerza": 2
+      },
+      "fuentes": {
+        "metro-subterraneo": "https://www.pulzo.com/elecciones-colombia-2023/juan-daniel-oviedo-pide-claridad-gustavo-bolivar-sobre-metro-elevado-bogota-PP2970445",
+        "cobro-congestion": "https://www.valoraanalitik.com/?p=299594",
+        "pie-fuerza": "https://www.colombia.com/elecciones/2023/elecciones-regionales-propuestas-de-juan-daniel-oviedo-para-la-alcaldia-de-bogota-419068"
+      }
     },
     {
-      "id": "paloma-valencia", "nombre": "Paloma Valencia", "partido": "Centro Democrático", "color": "#1f4e9c",
-      "respuestas": { "pie-fuerza": 2, "gobierno-nacional": -2 },
-      "fuentes": {}
+      "id": "paloma-valencia",
+      "nombre": "Paloma Valencia",
+      "partido": "Centro Democrático",
+      "color": "#1f4e9c",
+      "respuestas": {
+        "pie-fuerza": 2,
+        "gobierno-nacional": -2
+      },
+      "fuentes": {
+        "pie-fuerza": "https://www.elespectador.com/politica/elecciones-colombia-2026/paloma-valencia-lanza-su-propuesta-de-seguridad-asistieron-excancilleres-y-excomandantes/",
+        "gobierno-nacional": "https://www.eluniversal.com.co/politica/2026/04/24/paloma-valencia-la-gente-no-puede-votar-por-cepeda-creyendo-que-es-petro/"
+      }
     },
     {
-      "id": "daniel-briceno", "nombre": "Daniel Briceño", "partido": "Centro Democrático", "color": "#5a7fbf",
-      "respuestas": { "pie-fuerza": 2, "gobierno-nacional": -2 },
-      "fuentes": {}
+      "id": "daniel-briceno",
+      "nombre": "Daniel Briceño",
+      "partido": "Centro Democrático",
+      "color": "#5a7fbf",
+      "respuestas": {
+        "pie-fuerza": 2
+      },
+      "fuentes": {
+        "pie-fuerza": "https://www.vanguardia.com/colombia/2026/09/24/daniel-briceno-rechazo-escoltas-de-la-policia-esta-fue-su-razon/"
+      }
     },
     {
-      "id": "rodrigo-lara", "nombre": "Rodrigo Lara", "partido": "Exministro del Interior", "color": "#8d6a9f",
+      "id": "rodrigo-lara",
+      "nombre": "Rodrigo Lara",
+      "partido": "Exministro del Interior",
+      "color": "#8d6a9f",
       "respuestas": {},
       "fuentes": {}
     },
     {
-      "id": "maria-jose-pizarro", "nombre": "María José Pizarro", "partido": "Pacto Histórico (posible consulta)", "color": "#c2185b",
-      "respuestas": { "metro-subterraneo": 2, "gobierno-nacional": 2 },
+      "id": "maria-jose-pizarro",
+      "nombre": "María José Pizarro",
+      "partido": "Pacto Histórico (posible consulta)",
+      "color": "#c2185b",
+      "respuestas": {},
       "fuentes": {}
     },
     {
-      "id": "susana-muhamad", "nombre": "Susana Muhamad", "partido": "Pacto Histórico (posible consulta)", "color": "#2e7d32",
-      "respuestas": { "metro-subterraneo": 2, "van-der-hammen": -2, "gobierno-nacional": 2 },
-      "fuentes": {}
+      "id": "susana-muhamad",
+      "nombre": "Susana Muhamad",
+      "partido": "Pacto Histórico (posible consulta)",
+      "color": "#2e7d32",
+      "respuestas": {
+        "van-der-hammen": -2
+      },
+      "fuentes": {
+        "van-der-hammen": "https://www.bluradio.com/blu360/bogota/claudia-lopez-vs-muhamad-por-van-der-hammen-ministra-anuncia-posible-apelacion-a-decision-de-car-rg10"
+      }
     },
     {
-      "id": "carlos-carrillo", "nombre": "Carlos Carrillo", "partido": "Pacto Histórico (posible consulta)", "color": "#e4572e",
-      "respuestas": { "metro-subterraneo": 2, "gobierno-nacional": 2 },
-      "fuentes": {}
+      "id": "carlos-carrillo",
+      "nombre": "Carlos Carrillo",
+      "partido": "Pacto Histórico (posible consulta)",
+      "color": "#e4572e",
+      "respuestas": {
+        "metro-subterraneo": 2,
+        "gobierno-nacional": 2
+      },
+      "fuentes": {
+        "metro-subterraneo": "https://www.bluradio.com/blu360/bogota/petro-entiende-consecuencias-del-trencito-canero-que-firmo-penalosa-concejal-carrillo-sobre-metro-pr30",
+        "gobierno-nacional": "https://www.elpais.com.co/politica/el-exconcejal-carlos-carrillo-sera-el-nuevo-director-de-la-unidad-nacional-de-gestion-del-riesgo-0133.html"
+      }
     },
     {
-      "id": "gustavo-bolivar", "nombre": "Gustavo Bolívar", "partido": "Pacto Histórico (posible consulta)", "color": "#d1495b",
-      "respuestas": { "metro-subterraneo": 2, "gobierno-nacional": 2 },
-      "fuentes": {}
+      "id": "gustavo-bolivar",
+      "nombre": "Gustavo Bolívar",
+      "partido": "Pacto Histórico (posible consulta)",
+      "color": "#d1495b",
+      "respuestas": {
+        "metro-subterraneo": 2,
+        "gobierno-nacional": 2
+      },
+      "fuentes": {
+        "metro-subterraneo": "https://www.portafolio.co/economia/regiones/gustavo-bolivar-cambiaria-su-plan-de-gobierno-para-cumplir-compromiso-sobre-el-metro-591120",
+        "gobierno-nacional": "https://www.bluradio.com/blu360/bogota/sere-un-referendo-de-lo-que-pasa-con-el-gobierno-en-bogota-gustavo-bolivar-se-lanza-a-la-alcaldia-so35"
+      }
     }
   ]
 }
