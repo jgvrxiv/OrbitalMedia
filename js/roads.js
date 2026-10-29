@@ -305,19 +305,21 @@ export function buildRoadMesh(grid, net) {
       void gl; void gr;
     }
   }
-  if (net) for (const seg of net.segs) if (seg.ax === 3) diagRibbon(B, seg, net);
+  const junctions = net ? buildJunctions(B, net) : new Map();
+  if (net) for (const seg of net.segs) if (seg.ax === 3) diagRibbon(B, seg, net, junctions);
   return B.build();
 }
 
 // Cinta continua a 45° con el perfil de la vía. Se recorta media casilla en los extremos que son cruces
 // para que el pavimento cuadrado del cruce no se superponga.
-function diagRibbon(B, seg, net) {
+function diagRibbon(B, seg, net, junctions) {
   const R = ROADS[seg.k];
   const W = R.meters;
   const L = 0.03;
-  const node = (s) => net.nodes.get(s + ',' + seg.dy * (s - seg.line));
-  const trim0 = (node(seg.s0)?.segs.length || 0) > 1 ? 0.5 : 0;
-  const trim1 = (node(seg.s1)?.segs.length || 0) > 1 ? 0.5 : 0;
+  // recorte en los extremos: hasta donde empieza el polígono del cruce (en unidades de s: √2 casillas)
+  const jr = (s) => junctions.get(s + ',' + seg.dy * (s - seg.line));
+  const trim0 = jr(seg.s0) !== undefined ? jr(seg.s0) / Math.SQRT2 : 0;
+  const trim1 = jr(seg.s1) !== undefined ? jr(seg.s1) / Math.SQRT2 : 0;
   const sA = seg.s0 + trim0, sB = seg.s1 - trim1;
   if (sB - sA < 0.05) return;
   // dirección y normal en el plano (x, z) del mundo
@@ -383,4 +385,85 @@ function diagRibbon(B, seg, net) {
       }
     }
   }
+}
+
+// ---------- cruces con diagonales ----------
+// En cada nodo donde llega al menos una diagonal se dibuja un polígono de cruce: la envolvente convexa de los
+// bordes de todos los brazos a una distancia r del nodo (andén y calzada por separado), con cebras en los
+// brazos diagonales. Devuelve Map(nodo -> r) para recortar las cintas diagonales.
+function hull(pts) {
+  const p = [...pts].sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  const cross = (o, a, b) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+  const lo = [], up = [];
+  for (const q of p) { while (lo.length >= 2 && cross(lo[lo.length - 2], lo[lo.length - 1], q) <= 0) lo.pop(); lo.push(q); }
+  for (const q of p.reverse()) { while (up.length >= 2 && cross(up[up.length - 2], up[up.length - 1], q) <= 0) up.pop(); up.push(q); }
+  return lo.slice(0, -1).concat(up.slice(0, -1));
+}
+const halfWidths = (k) => {
+  const R = ROADS[k];
+  const edge = (arr) => { let w = 0; for (const s of arr) { if (s.t === 'walk' || s.t === 'verge' || s.t === 'bar') w += s.w; else break; } return w; };
+  const side = Math.max(edge(R.strips), edge([...R.strips].reverse()));
+  return { full: R.meters / 2 / MPT, cw: (R.meters / 2 - side) / MPT };
+};
+
+function buildJunctions(B, net) {
+  const out = new Map();
+  const L = 0.03;
+  for (const [key, node] of net.nodes) {
+    const segs = node.segs.map((id) => net.byId.get(id)).filter(Boolean);
+    if (segs.length < 2 || !segs.some((s) => s.ax === 3)) continue;
+    // brazos: dirección hacia afuera y punto del eje en el nodo (coordenadas de casilla)
+    const arms = segs.map((seg) => {
+      const atStart = key === `${node.x},${node.y}` && (seg.ax === 3 ? seg.s0 === node.x : seg.ax === 0 ? seg.s0 === node.x : seg.s0 === node.y);
+      const sgn = atStart ? 1 : -1;
+      let d, ax0;
+      if (seg.ax === 3) {
+        d = [sgn * Math.SQRT1_2, sgn * seg.dy * Math.SQRT1_2];
+        const m = diagLines(ROADS[seg.k].w) - 1;
+        ax0 = [node.x + m / 4, node.y - seg.dy * m / 4];
+      } else {
+        d = seg.ax === 0 ? [sgn, 0] : [0, sgn];
+        ax0 = [node.x, node.y];
+      }
+      return { seg, d, ax0, hw: halfWidths(seg.k) };
+    });
+    const r = Math.max(0.5, ...arms.map((a) => a.hw.full)) + 0.08;
+    out.set(key, r);
+    const outer = [], inner = [];
+    for (const a of arms) {
+      const n = [-a.d[1], a.d[0]];
+      const dist = a.seg.ax === 3 ? r : 0.5; // los brazos rectos ya llegan hasta el borde de la casilla del nodo
+      const c = [a.ax0[0] + a.d[0] * dist, a.ax0[1] + a.d[1] * dist];
+      for (const sg of [-1, 1]) {
+        outer.push([c[0] + n[0] * a.hw.full * sg, c[1] + n[1] * a.hw.full * sg]);
+        inner.push([c[0] + n[0] * a.hw.cw * sg, c[1] + n[1] * a.hw.cw * sg]);
+      }
+    }
+    const W = (p) => [p[0] - N / 2 + 0.5, p[1] - N / 2 + 0.5];
+    const fan = (poly, lift, color) => {
+      const ps = poly.map(W);
+      const cx = ps.reduce((s, p) => s + p[0], 0) / ps.length, cz = ps.reduce((s, p) => s + p[1], 0) / ps.length;
+      for (let i = 0; i < ps.length; i++) {
+        const a = ps[i], b = ps[(i + 1) % ps.length];
+        B.tri([cx, H(cx, cz) + lift, cz], [b[0], H(b[0], b[1]) + lift, b[1]], [a[0], H(a[0], a[1]) + lift, a[1]], color);
+      }
+    };
+    const k = arms.reduce((best, a) => (ROADS[a.seg.k].rank > ROADS[best.seg.k].rank ? a : best)).seg.k;
+    fan(hull(outer), L + 0.03, COL.walk);
+    fan(hull(inner), L + 0.034, ROADS[k].color);
+    // cebras en los brazos diagonales, justo afuera del cruce
+    for (const a of arms) {
+      if (a.seg.ax !== 3 || a.seg.k === 'tierra' || a.seg.k === 'peatonal') continue;
+      const n = [-a.d[1], a.d[0]];
+      const n5 = Math.max(3, Math.round(a.hw.cw * 2 / 0.17));
+      for (let i = 0; i < n5; i++) {
+        const t0 = -a.hw.cw + (i + 0.2) * (2 * a.hw.cw / n5), t1 = t0 + 0.6 * (2 * a.hw.cw / n5);
+        const q = (u, v) => W([a.ax0[0] + a.d[0] * u + n[0] * v, a.ax0[1] + a.d[1] * u + n[1] * v]);
+        const p1 = q(r + 0.05, t0), p2 = q(r + 0.05, t1), p3 = q(r + 0.2, t1), p4 = q(r + 0.2, t0);
+        const y = (p) => [p[0], H(p[0], p[1]) + L + 0.012, p[1]];
+        B.quad(y(p1), y(p2), y(p3), y(p4), WHITE);
+      }
+    }
+  }
+  return out;
 }

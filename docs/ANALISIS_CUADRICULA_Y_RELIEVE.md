@@ -103,8 +103,28 @@ solapes se resuelven dando prioridad al lote más cercano a la vía y a la vía 
 se ubican en el centro del lote, girados para mirar la vía y a tamaño completo, y la capa de zonas dibuja
 los lotes girados. Las casillas sobrantes junto a la escalera de la diagonal quedan sin acceso (zona verde).
 
-Siguiente paso: generar también los lotes de las vías ortogonales desde el segmento (hoy coinciden con las
-casillas) y luego admitir segmentos curvos con el mismo generador.
+Ahora **todos** los lotes, rectos y diagonales, salen de los segmentos y compiten con una sola prioridad
+(fondo menor primero, luego la vía de mayor rango). Así una calle recta que cruza la franja de una diagonal
+toma sus lotes de frente y no quedan lotes rectos y girados encima unos de otros.
+
+### Cruces con diagonales
+
+En cada nodo donde llega una diagonal se dibuja un **polígono de cruce**: la envolvente convexa de los
+bordes de todos los brazos (andén y calzada por separado), las cintas diagonales se recortan donde empieza y
+cada brazo diagonal lleva su cebra. Propuestas siguientes para los empalmes complejos:
+
+1. **Radios de giro**: redondear las esquinas del polígono con arcos (un radio por tipo de vía) en vez de
+   unir los bordes con rectas.
+2. **Cruces en estrella de 5-6 brazos**: convertirlos en **glorieta** automática cuando el ángulo entre dos
+   brazos sea menor de 45°, o pedir al jugador que la construya (herramienta de glorieta).
+3. **Ángulo mínimo**: impedir trazar una vía que forme menos de 30° con otra en el mismo nodo, como en
+   Cities: Skylines; sugerir desplazar el empalme.
+4. **Nodos cercanos**: unir cruces que queden a menos de una casilla en un solo nodo para evitar dos
+   polígonos casi superpuestos.
+5. **Semáforos y prioridades**: marcar visualmente las vías de mayor rango como preferenciales (sin cebra
+   sobre ellas, con línea de pare en las secundarias).
+
+Siguiente paso de la fase 3: segmentos curvos con el mismo generador de lotes.
 
 ## 3. Relieve: qué se implementó
 

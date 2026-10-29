@@ -9,7 +9,7 @@ import { S, N, tw, Trees, TileLayer, padOf, tileCenterH, applyCornerLevels, hC0,
 import { mats, rng, Builder } from './geom.js';
 import { InstPools } from './render.js';
 import { ROADS, buildRoadMesh } from './roads.js';
-import { diagParcels } from './parcels.js';
+import { buildParcels } from './parcels.js';
 import { createNet, lanesOf, addSegment, removeCell, rasterize, netFromTiles, serializeNet, loadNet, crossLevels } from './roadnet.js';
 import { buildModel, VARIANTS, typeName } from './models.js';
 import { pickResType, resPop } from './models_res.js';
@@ -123,7 +123,7 @@ function rebuildZones() {
     const t = G.grid[y][x];
     if (!t.zone || t.bld) continue;
     const pc = G.parcels?.get(idx(x, y));
-    if (!pc && G.diagRegion?.[idx(x, y)]) continue;
+    if (!pc && G.diagRegion?.[idx(x, y)] && !G.access[idx(x, y)]) continue;
     list.push(pc ? { x, y, px: pc.px, py: pc.py, ang: pc.ang, color: ZONES[t.zone].color } : { x, y, color: ZONES[t.zone].color });
   }
   zoneLayer.set(list, 0.04);
@@ -196,37 +196,23 @@ function detach(b) {
 function recomputeAccess() {
   G.access.fill(0);
   G.face.fill(-1);
-  // vías ortogonales: los lotes son las casillas vecinas (o a dos casillas en baja densidad)
-  const ortho = (x, y) => { const r = roadAt(x, y); return r && r.ax !== 3 ? r : null; };
-  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
-    if (G.grid[y][x].road) continue;
-    let best = 0, dir = -1;
-    DIRS.forEach(([dx, dy], d) => {
-      const r = ortho(x + dx, y + dy);
-      if (r && ROADS[r.k].dens > best) { best = ROADS[r.k].dens; dir = d; }
-    });
-    if (!best) {
-      DIRS.forEach(([dx, dy], d) => {
-        if (best) return;
-        const r = ortho(x + 2 * dx, y + 2 * dy);
-        const mid = tile(x + dx, y + dy);
-        if (r && ROADS[r.k].dens > 0 && mid && !mid.road) { best = 1; dir = d; }
-      });
-    }
-    G.access[idx(x, y)] = best;
-    G.face[idx(x, y)] = dir;
+  // todos los lotes salen de los segmentos de vía (rectos o diagonales) con una sola prioridad
+  const pr = buildParcels(G.net, G.grid, N);
+  G.parcels = new Map();
+  G.diagRegion = pr.region;
+  for (const [i, p] of pr.parcels) {
+    G.access[i] = p.dens;
+    G.face[i] = p.face;
+    if (p.diag) G.parcels.set(i, p);
   }
-  // vías diagonales: reservan una franja propia y generan sus lotes alineados con la vía
-  const dp = diagParcels(G.net, G.grid, N);
-  G.parcels = dp.parcels;
-  G.diagRegion = dp.region;
+  // la cuadrícula visible se alinea con la vía: en la franja de una diagonal sólo se ven sus lotes girados
+  const mask = new Uint8Array(N * N);
   for (let i = 0; i < N * N; i++) {
-    if (!dp.region[i]) continue;
-    const p = G.parcels.get(i);
-    G.access[i] = p ? p.dens : 0;
-    G.face[i] = -1;
+    if (!pr.region[i]) continue;
+    const p = pr.parcels.get(i);
+    if (!p || p.diag) mask[i] = 1;
   }
-  const mask = dp.region.slice();
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) { const r = G.grid[y][x].road; if (r && r.ax === 3) mask[idx(x, y)] = 1; }
   setGridMask(mask, [...G.parcels.values()]);
 }
 
