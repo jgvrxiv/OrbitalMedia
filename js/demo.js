@@ -34,13 +34,12 @@ export function buildDemo() {
   R('avenida', 12, 46, 54, 46);
   R('avenida', 14, 16, 54, 16);
   // calles
-  for (const x of [20, 30, 40, 45, 50, 55]) R('calle', x, 5, x, 58);
-  for (const y of [10, 23, 38, 53]) R('calle', 18, y, 58, y);
-  R('peatonal', 38, 24, 38, 29);
-  R('peatonal', 30, 26, 32, 26);
+  // manzanas de al menos 4 casillas libres (48 m) de lado corto entre vías
+  for (const x of [20, 42, 49, 56]) R('calle', x, 5, x, 58);
+  for (const y of [9, 24, 39, 55]) R('calle', 18, y, 58, y);
   // laderas occidentales: caminos destapados
   for (const x of [4, 9, 14]) R('tierra', x, 12, x, 54);
-  for (const y of [19, 26, 34, 42, 50]) R('tierra', 2, y, 19, y);
+  for (const y of [22, 36, 41, 52]) R('tierra', 2, y, 19, y);
   flush();
 
   // servicios: más al oriente (zona rica) y algunos en el centro
