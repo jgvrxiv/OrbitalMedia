@@ -5,7 +5,7 @@
 //   la cobertura de servicios, el tipo de vía, el comercio cercano y la contaminación.
 // - La demanda R/C/I equilibra vivienda, empleo y bienes (la industria produce, el comercio consume).
 import * as THREE from '../vendor/three.module.min.js';
-import { S, N, tw, Trees, TileLayer, padOf, tileCenterH, applyCornerLevels, hC0 } from './scene.js';
+import { S, N, tw, Trees, TileLayer, padOf, tileCenterH, applyCornerLevels, hC0, setGridMask, setParcelLookup } from './scene.js';
 import { mats, rng, Builder } from './geom.js';
 import { InstPools } from './render.js';
 import { ROADS, buildRoadMesh } from './roads.js';
@@ -102,6 +102,7 @@ const overlayLayer = new TileLayer(N * N, 0.55, 0.06);
 const padGeom = (() => { const B = new Builder(9); B.box(0, 0, 0, 1, 1, 1, '#aaa496', { top: '#9d978a' }); return B.build(); })();
 
 export function attachWorld() {
+  setParcelLookup((x, y) => (inb(x, y) ? G.parcels?.get(idx(x, y)) || null : null));
   pools = new InstPools(bldGroup, mats.solid);
   S.root.add(bldGroup, zoneLayer.mesh, overlayLayer.mesh);
   overlayLayer.mesh.visible = false;
@@ -122,6 +123,7 @@ function rebuildZones() {
     const t = G.grid[y][x];
     if (!t.zone || t.bld) continue;
     const pc = G.parcels?.get(idx(x, y));
+    if (!pc && G.diagRegion?.[idx(x, y)]) continue;
     list.push(pc ? { x, y, px: pc.px, py: pc.py, ang: pc.ang, color: ZONES[t.zone].color } : { x, y, color: ZONES[t.zone].color });
   }
   zoneLayer.set(list, 0.04);
@@ -214,13 +216,18 @@ function recomputeAccess() {
     G.access[idx(x, y)] = best;
     G.face[idx(x, y)] = dir;
   }
-  // vías diagonales: lotes generados por la propia vía, alineados con ella
-  G.parcels = diagParcels(G.net, G.grid, N);
-  for (const [i, p] of G.parcels) {
-    if (G.access[i] >= p.dens) { G.parcels.delete(i); continue; } // la vía ortogonal ya da mejor frente
-    G.access[i] = p.dens;
+  // vías diagonales: reservan una franja propia y generan sus lotes alineados con la vía
+  const dp = diagParcels(G.net, G.grid, N);
+  G.parcels = dp.parcels;
+  G.diagRegion = dp.region;
+  for (let i = 0; i < N * N; i++) {
+    if (!dp.region[i]) continue;
+    const p = G.parcels.get(i);
+    G.access[i] = p ? p.dens : 0;
     G.face[i] = -1;
   }
+  const mask = dp.region.slice();
+  setGridMask(mask, [...G.parcels.values()]);
 }
 
 export function recomputeCoverage() {

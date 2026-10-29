@@ -156,10 +156,33 @@ function rebuildTerrainMesh() {
   if (S.far) S.far.position.y = lo - 0.4;
 }
 
+// Máscara de la cuadrícula: casillas donde no se dibujan las líneas fijas (vías diagonales y sus lotes)
+// y lotes girados que se dibujan en su lugar. La define game.js al recalcular los lotes.
+let gridMask = null, gridQuads = [];
+export function setGridMask(mask, quads) {
+  gridMask = mask; gridQuads = quads || [];
+  if (S.grid) rebuildGridLines();
+}
+
 function rebuildGridLines() {
   const pts = [];
-  for (let j = 0; j <= N; j++) for (let i = 0; i < N; i++) pts.push(i - N / 2, hC(i, j) + 0.04, j - N / 2, i + 1 - N / 2, hC(i + 1, j) + 0.04, j - N / 2);
-  for (let i = 0; i <= N; i++) for (let j = 0; j < N; j++) pts.push(i - N / 2, hC(i, j) + 0.04, j - N / 2, i - N / 2, hC(i, j + 1) + 0.04, j + 1 - N / 2);
+  const masked = (i, j) => gridMask && i >= 0 && j >= 0 && i < N && j < N && gridMask[j * N + i];
+  // aristas horizontales (entre la casilla de arriba j-1 y la de abajo j) y verticales
+  for (let j = 0; j <= N; j++) for (let i = 0; i < N; i++) {
+    if (masked(i, j - 1) || masked(i, j)) continue;
+    pts.push(i - N / 2, hC(i, j) + 0.04, j - N / 2, i + 1 - N / 2, hC(i + 1, j) + 0.04, j - N / 2);
+  }
+  for (let i = 0; i <= N; i++) for (let j = 0; j < N; j++) {
+    if (masked(i - 1, j) || masked(i, j)) continue;
+    pts.push(i - N / 2, hC(i, j) + 0.04, j - N / 2, i - N / 2, hC(i, j + 1) + 0.04, j + 1 - N / 2);
+  }
+  // lotes girados
+  for (const q of gridQuads) {
+    const cx = q.px - N / 2 + 0.5, cz = q.py - N / 2 + 0.5, c = Math.cos(q.ang), sn = Math.sin(q.ang);
+    const P = (a, b) => { const x = cx + a * c + b * sn, z = cz - a * sn + b * c; return [x, heightAt(x, z) + 0.05, z]; };
+    const cs = [P(-0.5, 0.5), P(0.5, 0.5), P(0.5, -0.5), P(-0.5, -0.5)];
+    for (let k = 0; k < 4; k++) pts.push(...cs[k], ...cs[(k + 1) % 4]);
+  }
   S.grid.geometry.dispose();
   S.grid.geometry = new THREE.BufferGeometry();
   S.grid.geometry.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
@@ -447,8 +470,15 @@ export class TileLayer {
 }
 
 const GREEN = '#37d67a', RED = '#ff4d5e', BLUE = '#4da3ff';
+// lote girado asociado a una casilla (lo define game.js); la vista previa lo dibuja en vez de la casilla
+let parcelAt = () => null;
+export function setParcelLookup(fn) { parcelAt = fn; }
 export function setPreview(tiles, mode) {
-  S.preview.set(tiles.map((t) => ({ x: t.x, y: t.y, color: t.color || (t.ok ? (mode === 'info' ? BLUE : GREEN) : RED) })));
+  S.preview.set(tiles.map((t) => {
+    const c = t.color || (t.ok ? (mode === 'info' ? BLUE : GREEN) : RED);
+    const p = parcelAt(t.x, t.y);
+    return p ? { x: t.x, y: t.y, px: p.px, py: p.py, ang: p.ang, color: c } : { x: t.x, y: t.y, color: c };
+  }));
 }
 
 // ---------------- árboles decorativos ----------------

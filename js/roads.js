@@ -185,12 +185,8 @@ export function buildRoadMesh(grid, net) {
       }
 
       // ---- diagonales: la casilla de la escalera se rellena; la cinta se dibuja por segmento más abajo ----
-      if (t.ax === 3) {
-        if (t.k === 'tierra') flat(B, x0, z0, x1, z1, L - 0.012, COL.verge);
-        else if (t.k === 'peatonal') flat(B, x0, z0, x1, z1, L - 0.002, COL.paver, CELL.BRICK);
-        else flat(B, x0, z0, x1, z1, L - 0.012, COL.verge);
-        continue;
-      }
+      // diagonales: no se pinta la casilla de la escalera (se vería la cuadrícula); sólo la cinta continua
+      if (t.ax === 3) continue;
 
       // ---- tramo: franja del perfil que cae en esta casilla ----
       const ax = t.ax;
