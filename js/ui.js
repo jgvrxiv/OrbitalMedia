@@ -5,7 +5,7 @@ import { mats } from './geom.js';
 import {
   G, COST, ZONES, MONTHS, DENS_NAME, ESTRATO_COLORS, CATS, fmt, coverageAt, rectTiles, zoneOk, paintZone,
   canPlacePublic, placePublic, bulldoze, removeBuilding, markDirty, flush, buildRoad, roadTileCheck, junctionNear, isRound, toggleRound, ROUND_COST,
-  zoneProblem, estratoOf, buildingLabel, refreshOverlay, idx,
+  zoneProblem, estratoOf, diagLeftover, buildingLabel, refreshOverlay, idx,
 } from './game.js';
 import { ROADS, ROAD_ORDER, roadPlan, diagLines } from './roads.js';
 import { PUBLIC, SERVICES, buildPublic } from './buildings.js';
@@ -279,7 +279,7 @@ function updatePreview() {
     else setPreview(prev);
     if (UI.drag) info.textContent = `${ROADS[T0.k].name}: ${Math.round(u2m(plan.diag ? (plan.diag.s1 - plan.diag.s0) * Math.SQRT2 : plan.length / ROADS[T0.k].w))} m de largo${plan.diag ? ' (diagonal)' : ''} · costo ${fmt(cost)}` + (bad ? ` · ${bad} casillas bloqueadas` : '') + (steep ? ` · pendiente mayor a ${Math.round(ROADS[T0.k].maxSlope * 100)} %${T0.k !== 'peatonal' ? ': usa calle peatonal (hasta 40 %)' : ''}` : '');
   } else if (T0.type === 'zone') {
-    const tiles = UI.drag ? rectTiles(UI.drag.start, h) : [{ x: h.x, y: h.y }];
+    const tiles = (UI.drag ? rectTiles(UI.drag.start, h) : [{ x: h.x, y: h.y }]).filter((p) => !diagLeftover(p.x, p.y));
     const prev = tiles.map((p) => ({ ...p, ok: zoneOk(p.x, p.y, T0.z), color: zoneOk(p.x, p.y, T0.z) ? ZONES[T0.z].color : null }));
     setPreview(prev);
     if (UI.drag) info.textContent = `${ZONES[T0.z].name}: ${prev.filter((p) => p.ok).length} casillas · costo ${fmt(prev.filter((p) => p.ok).length * COST.zone)}`;

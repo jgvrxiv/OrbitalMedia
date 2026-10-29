@@ -255,6 +255,27 @@ function recomputeAccess() {
   const mask = new Uint8Array(N * N);
   for (const [i, p] of pr.parcels) if (!p.diag) mask[i] = 1;
   setGridMask(mask, [...G.parcels.values()]);
+  reconcileBuildings();
+}
+
+// Reacomoda los edificios a los lotes actuales cuando cambian las vías: un edificio girado cuya diagonal ya no
+// existe se orienta a la vía recta que quedó (o se demuele si no tiene frente a ninguna), y los rectos toman el
+// frente de su vía actual.
+function reconcileBuildings() {
+  for (const b of [...G.buildings]) {
+    if (b.kind === 'pub' || b.w > 1 || !b.h_) continue;
+    const i = idx(b.x, b.y);
+    const pc = G.parcels?.get(i);
+    if (b.da !== null && b.da !== undefined) {
+      const same = pc && b.px !== null && Math.hypot(pc.px - b.px, pc.py - b.py) < 0.6;
+      if (same) continue;
+      if (G.face[i] >= 0) { b.da = null; b.px = null; b.py = null; b.rot = G.face[i]; detach(b); attach(b); b.grow = 0.999; }
+      else removeBuilding(b);
+    } else if (G.face[i] >= 0 && b.rot !== G.face[i]) {
+      b.rot = G.face[i];
+      pools.set(b.h_, bldMatrix(b, b.grow >= 1 ? 1 : 0.001));
+    }
+  }
 }
 
 export function recomputeCoverage() {
@@ -581,9 +602,15 @@ export function rectTiles(a, b) {
   return out;
 }
 
+// casilla sobrante dentro de la franja de una diagonal: no pertenece a ningún lote
+export const diagLeftover = (x, y) => !!G.diagRegion?.[idx(x, y)] && !G.access[idx(x, y)];
+
 export function zoneOk(x, y, z) {
   const t = tile(x, y);
-  return !!t && !t.road && !t.stop && !(t.bld && t.bld.kind === 'pub') && t.zone !== z;
+  if (!t || t.road || t.stop || (t.bld && t.bld.kind === 'pub') || t.zone === z) return false;
+  // junto a una diagonal sólo se zonifican los lotes que ella genera (las casillas sobrantes de la franja no sirven)
+  if (G.diagRegion?.[idx(x, y)] && !G.access[idx(x, y)]) return false;
+  return true;
 }
 
 // motivo por el que una casilla zonificada no crece (para la interfaz)
