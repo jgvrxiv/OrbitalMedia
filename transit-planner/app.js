@@ -7,10 +7,13 @@ let activeId = null;
 const layers = new Map(); // lineId -> { poly, markers }
 
 const map = L.map('map').setView([4.711, -74.072], 12);
-L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  maxZoom: 19,
-  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-}).addTo(map);
+// OSM bloquea peticiones sin Referer (abrir el archivo con doble clic, file://).
+// En ese caso usamos CARTO, que también dibuja datos de OpenStreetMap.
+const OSM = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+const tiles = location.protocol === 'file:'
+  ? { url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', subdomains: 'abcd', attribution: OSM + ' &copy; <a href="https://carto.com/attributions">CARTO</a>' }
+  : { url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', subdomains: 'abc', attribution: OSM };
+L.tileLayer(tiles.url, { maxZoom: 19, subdomains: tiles.subdomains, attribution: tiles.attribution, referrerPolicy: 'origin' }).addTo(map);
 
 function el(tag, props = {}, ...kids) {
   const n = document.createElement(tag);
