@@ -15,18 +15,31 @@ const ORTHO_DEPTH = 2, DIAG_DEPTH = 3;
 //  region: casillas reservadas por las diagonales (sin lote girado no se usan).
 export function buildParcels(net, grid, N) {
   const region = new Uint8Array(N * N);
+  const blocked = new Uint8Array(N * N); // casillas que toca el cuerpo de una vía diagonal
   const cand = [];
   for (const seg of net.segs) {
     const R = ROADS[seg.k];
     if (!R.dens) continue;
-    if (seg.ax === DIAG) diagCandidates(seg, R, N, region, cand);
+    if (seg.ax === DIAG) diagCandidates(seg, R, N, region, cand, blocked);
     else orthoCandidates(seg, R, N, grid, cand);
   }
-  cand.sort((a, b) => a.depth - b.depth || b.rank - a.rank || (a.diag ? 1 : 0) - (b.diag ? 1 : 0));
+  // la geometría manda: primero se colocan los lotes girados; un lote recto no puede cruzar una vía diagonal
+  // ni un lote girado ya colocado, aunque la casilla esté libre
   const out = new Map();
+  const diagLots = [];
+  const clashes = (c) => {
+    if (blocked[c.i]) return true;
+    for (const q of diagLots) {
+      const dx = Math.abs(q.px - c.px), dy = Math.abs(q.py - c.py);
+      if (dx < 1.05 && dy < 1.05 && dx + dy < 1.5) return true;
+    }
+    return false;
+  };
+  cand.sort((a, b) => (b.diag ? 1 : 0) - (a.diag ? 1 : 0) || a.depth - b.depth || b.rank - a.rank);
   const free = (i) => i >= 0 && i < N * N && !out.has(i) && !grid[(i / N) | 0][i % N].road;
   for (const c of cand) {
     let i = c.i;
+    if (!c.diag && clashes(c)) continue;
     if (!free(i)) {
       if (!c.diag) continue;
       // lote girado: si su casilla ya tiene lote, usa la casilla libre de la franja más cercana a su centro
@@ -42,6 +55,7 @@ export function buildParcels(net, grid, N) {
       i = best;
     }
     out.set(i, { ...c, i });
+    if (c.diag) diagLots.push(c);
   }
   return { parcels: out, region };
 }
@@ -66,7 +80,7 @@ function orthoCandidates(seg, R, N, grid, cand) {
   }
 }
 
-function diagCandidates(seg, R, N, region, cand) {
+function diagCandidates(seg, R, N, region, cand, blocked) {
   const m = diagLines(R.w) - 1;
   const ux = Math.SQRT1_2, uy = seg.dy * Math.SQRT1_2; // dirección de la vía
   const nx = -seg.dy * Math.SQRT1_2, ny = Math.SQRT1_2; // normal
@@ -80,6 +94,7 @@ function diagCandidates(seg, R, N, region, cand) {
       const dx = tx - ox, dy = ty - oy;
       const t = dx * ux + dy * uy, d = dx * nx + dy * ny;
       if (t >= 0 && t <= L && Math.abs(d) <= reach) region[ty * N + tx] = 1;
+      if (t >= -0.5 && t <= L + 0.5 && Math.abs(d) < half + 0.6) blocked[ty * N + tx] = 1;
     }
   }
   for (const side of [-1, 1]) {
