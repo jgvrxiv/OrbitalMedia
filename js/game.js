@@ -23,9 +23,9 @@ export const ZONES = {
   4: { k: 'c', d: 1, name: 'Comercial · baja', color: '#9cc9ff' },
   5: { k: 'c', d: 2, name: 'Comercial · media', color: '#3d8bfd' },
   6: { k: 'c', d: 3, name: 'Comercial · alta', color: '#1c4fb8' },
-  7: { k: 'i', d: 1, name: 'Industrial · baja', color: '#ffe08a' },
-  8: { k: 'i', d: 2, name: 'Industrial · media', color: '#f2b51c' },
-  9: { k: 'i', d: 3, name: 'Industrial · alta', color: '#c98208' },
+  7: { k: 'i', d: 1, name: 'Industrial · baja', color: '#fff27a' },
+  8: { k: 'i', d: 2, name: 'Industrial · media', color: '#f7d117' },
+  9: { k: 'i', d: 3, name: 'Industrial · alta', color: '#d1ad00' },
 };
 export const DENS_NAME = ['', 'Baja', 'Media', 'Alta'];
 export const ESTRATO_COLORS = ['#e5484d', '#f08a24', '#f2d024', '#6cc04a', '#2f9bd6', '#9b5de5'];

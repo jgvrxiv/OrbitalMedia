@@ -11,6 +11,18 @@ import {
 import { buildDemo } from './demo.js';
 
 const SAVE_KEY = 'ciudad-tricolor-v2';
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); return true; } catch (e) { return false; } },
+};
+// confirmación dentro de la página (el navegador del visor puede bloquear confirm())
+function ask(msg, onYes) {
+  const box = document.getElementById('ask');
+  document.getElementById('askMsg').textContent = msg;
+  box.hidden = false;
+  document.getElementById('askYes').onclick = () => { box.hidden = true; onYes(); };
+  document.getElementById('askNo').onclick = () => { box.hidden = true; };
+}
 
 initMaterials();
 initScene(document.getElementById('c'));
@@ -40,10 +52,8 @@ G.onChange = refresh;
 initUI();
 
 function save(silent) {
-  try {
-    localStorage.setItem(SAVE_KEY, JSON.stringify({ game: serialize(), transit: TR.serialize() }));
-    if (!silent) toast('Ciudad guardada 💾', 'good');
-  } catch (e) { if (!silent) toast('No se pudo guardar', 'warn'); }
+  const ok = store.set(SAVE_KEY, JSON.stringify({ game: serialize(), transit: TR.serialize() }));
+  if (!silent) toast(ok ? 'Ciudad guardada 💾' : 'No se pudo guardar en este navegador', ok ? 'good' : 'warn');
 }
 function setTerrain(kind, seed) {
   genTerrain(kind, seed);
@@ -52,7 +62,7 @@ function setTerrain(kind, seed) {
 }
 function loadSave(silent) {
   try {
-    const raw = localStorage.getItem(SAVE_KEY);
+    const raw = store.get(SAVE_KEY);
     if (!raw) { if (!silent) toast('No hay partida guardada', 'warn'); return false; }
     const d = JSON.parse(raw);
     TR.clearAll();
@@ -91,20 +101,22 @@ const $ = (s) => document.querySelector(s);
 $('#bSave').onclick = () => save(false);
 $('#bLoad').onclick = () => loadSave(false);
 $('#bNew').onclick = () => { $('#help').hidden = false; };
-$('#bDemo').onclick = () => { if (!G.buildings.length || confirm('Esto reemplazará tu ciudad actual. ¿Continuar?')) demo(); };
+$('#bDemo').onclick = () => { if (!G.buildings.length) demo(); else ask('Esto reemplazará tu ciudad actual por la ciudad de ejemplo.', demo); };
 $('#bHelp').onclick = () => { $('#help').hidden = false; };
-$('#helpClose').onclick = () => { $('#help').hidden = true; localStorage.setItem('ct-seen', '1'); };
-$('#helpDemo').onclick = () => { $('#help').hidden = true; localStorage.setItem('ct-seen', '1'); demo(); };
+$('#helpClose').onclick = () => { $('#help').hidden = true; store.set('ct-seen', '1'); };
+$('#helpDemo').onclick = () => { $('#help').hidden = true; store.set('ct-seen', '1'); demo(); };
 $('#helpNew').onclick = () => {
-  if (G.buildings.length && !confirm('¿Empezar una ciudad nueva? Se perderá lo no guardado.')) return;
-  $('#help').hidden = true;
-  localStorage.setItem('ct-seen', '1');
-  newCity($('#terrSel').value, Math.floor(Math.random() * 1e6));
+  const go = () => {
+    $('#help').hidden = true;
+    store.set('ct-seen', '1');
+    newCity($('#terrSel').value, Math.floor(Math.random() * 1e6));
+  };
+  if (G.buildings.length) ask('¿Empezar una ciudad nueva? Se perderá lo que no hayas guardado.', go); else go();
 };
 
 if (!loadSave(true)) {
   newCity('valle', 7);
-  if (!localStorage.getItem('ct-seen')) $('#help').hidden = false;
+  if (!store.get('ct-seen')) $('#help').hidden = false;
 }
 refresh();
 

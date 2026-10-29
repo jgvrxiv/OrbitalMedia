@@ -421,7 +421,7 @@ export function renderCity() {
   const st = G.stats;
   const tot = Math.max(1, st.pop);
   let html = '<h3>Demanda</h3>';
-  html += dbar('Residencial', G.dem.r, '#45b956') + dbar('Comercial', G.dem.c, '#3d8bfd') + dbar('Industrial', G.dem.i, '#f2b51c');
+  html += dbar('Residencial', G.dem.r, '#45b956') + dbar('Comercial', G.dem.c, '#3d8bfd') + dbar('Industrial', G.dem.i, '#f7d117');
   html += '<h3>Población por estrato</h3>';
   ESTRATO_COLORS.forEach((c, i) => { html += bar(`Estrato ${i + 1}`, (st.byE[i] / tot) * 100, c, st.byE[i].toLocaleString('es-CO')); });
   html += '<h3>Por densidad</h3>';

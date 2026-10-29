@@ -60,13 +60,20 @@
   <div id="legend" hidden></div>
   <div id="toasts"></div>
 
+  <div id="ask" class="modal" hidden>
+    <div class="card small">
+      <p id="askMsg"></p>
+      <div class="row"><button id="askNo">Cancelar</button><button id="askYes" class="go">Continuar</button></div>
+    </div>
+  </div>
+
   <div id="help" class="modal" hidden>
     <div class="card">
       <h2>🇨🇴 Bienvenido a Ciudad Tricolor</h2>
       <p>Construye una ciudad colombiana desde las invasiones del estrato 1 hasta los rascacielos y mansiones del estrato 6.</p>
       <ol>
         <li><b>Vías:</b> 6 tipos: camino destapado, calle, peatonal, avenida (2 casillas), troncal de buses (3) y autopista. La vía define qué densidad puede crecer al frente.</li>
-        <li><b>Zonas:</b> <span style="color:#45b956">residencial</span>, <span style="color:#3d8bfd">comercial</span> e <span style="color:#f2b51c">industrial</span>, cada una en densidad baja, media o alta (teclas 1-9).</li>
+        <li><b>Zonas:</b> <span style="color:#45b956">residencial</span>, <span style="color:#3d8bfd">comercial</span> e <span style="color:#f7d117">industrial</span>, cada una en densidad baja, media o alta (teclas 1-9).</li>
         <li><b>Estrato:</b> no se elige. Sale del <b>valor del suelo</b>: servicios cercanos, tipo de vía, comercio y contaminación. Un mismo barrio puede empezar en estrato 1 o en estrato 5 según lo que tenga alrededor, y sube o baja con el tiempo.</li>
         <li><b>Industria:</b> da empleo y produce bienes para el comercio; si falta, la ciudad importa; si sobra, exporta. Contamina y baja el estrato de los vecinos.</li>
         <li><b>Transporte:</b> paraderos en calles/avenidas/troncales y estaciones de Metrocable (ideales en laderas). Crea líneas haciendo clic en las paradas en orden y Enter.</li>

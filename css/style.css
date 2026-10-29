@@ -103,7 +103,7 @@ button:disabled { opacity: 0.4; cursor: not-allowed; filter: grayscale(0.6); }
 .rci { gap: 3px; padding: 4px 8px; }
 .rci .rb { position: relative; width: 7px; height: 26px; background: rgba(255, 255, 255, 0.12); border-radius: 2px; overflow: hidden; }
 .rci .rb i { position: absolute; left: 0; right: 0; bottom: 50%; height: 0; border-radius: 1px; }
-#dr { background: #45b956; } #dc { background: #3d8bfd; } #di { background: #f2b51c; }
+#dr { background: #45b956; } #dc { background: #3d8bfd; } #di { background: #f7d117; }
 .rci .rb i.negd { background: #ff6b78 !important; }
 .rci small { writing-mode: vertical-rl; font-size: 9px; color: var(--mut); letter-spacing: 1px; margin-left: 2px; }
 .clock { border: 1px solid var(--line); }
@@ -117,3 +117,5 @@ button:disabled { opacity: 0.4; cursor: not-allowed; filter: grayscale(0.6); }
 #legend i { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
 .terr { margin-right: auto; color: var(--mut); display: flex; align-items: center; gap: 6px; }
 .terr select { background: #0f1d2e; color: var(--txt); border: 1px solid var(--line); border-radius: 6px; padding: 4px; }
+.card.small { width: min(420px, 92vw); }
+#ask { z-index: 40; }
