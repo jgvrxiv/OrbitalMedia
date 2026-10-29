@@ -2,12 +2,14 @@
 
 App 100 % estática: mapa real de OpenStreetMap (Leaflet) y sin servidor, base de datos ni API keys.
 
-## Uso local
+## Uso
+Abre `index.html` con doble clic. Es un solo archivo con todo incluido (necesita internet para Leaflet y el mapa).
+
+## Desarrollo
+`index.html` se **genera**; no lo edites a mano. Edita `index.src.html`, `lib.js` o `app.js` y corre:
 ```bash
-cd transit-planner
-python -m http.server 8000    # o: npx serve
+node build.js
 ```
-Abre http://localhost:8000 (los módulos ES no funcionan abriendo el archivo con doble clic).
 
 ## Qué hace
 - Varias líneas (bus, tranvía, metro) con color y nombre; clic en el mapa añade paradas a la línea activa.
@@ -26,4 +28,4 @@ node --test test/*.test.js
 ```
 
 ## Publicar gratis
-Sube la carpeta a GitHub Pages, Netlify o Cloudflare Pages.
+Sube `index.html` (solo ese archivo) a GitHub Pages, Netlify o Cloudflare Pages.
