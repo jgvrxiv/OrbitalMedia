@@ -169,11 +169,56 @@ function bldMatrix(b, sy = 1) {
 
 export const modelKey = (b) => (b.kind === 'pub' ? 'pub:' + b.key : `${b.kind}:${b.type}:${b.kind === 'ind' ? 3 : b.e}:${b.v}`);
 
+// ---------- obra en construcción: andamio que sube con el edificio y grúa en los altos ----------
+const siteGeom = (() => {
+  const B = new Builder(13);
+  B.plane(0, 0.014, 0, 0.98, 0.98, '#8d7a5c');
+  for (const [x, z] of [[-1, -1], [1, -1], [-1, 1], [1, 1], [0, -1], [0, 1], [-1, 0], [1, 0]]) B.box(x * 0.45, 0, z * 0.45, 0.025, 1, 0.025, '#e0a020');
+  for (let k = 1; k <= 5; k++) {
+    const y = k / 5 - 0.012;
+    B.box(0, y, 0.45, 0.92, 0.012, 0.03, '#c98a1a'); B.box(0, y, -0.45, 0.92, 0.012, 0.03, '#c98a1a');
+    B.box(0.45, y, 0, 0.03, 0.012, 0.92, '#c98a1a'); B.box(-0.45, y, 0, 0.03, 0.012, 0.92, '#c98a1a');
+  }
+  // malla verde de obra en dos caras
+  B.box(0, 0, 0.465, 0.92, 1, 0.004, '#3f7d4a', { noTop: true });
+  B.box(-0.465, 0, 0, 0.004, 1, 0.92, '#3f7d4a', { noTop: true });
+  // cerramiento de lámina y materiales
+  B.box(0, 0, 0.495, 0.98, 0.09, 0.01, '#9aa0a6'); B.box(0.495, 0, 0, 0.01, 0.09, 0.98, '#9aa0a6');
+  return B.build();
+})();
+const craneGeom = (() => {
+  const B = new Builder(14);
+  B.box(0.32, 0, -0.32, 0.06, 1, 0.06, '#f2c230');
+  B.box(0.1, 0.97, -0.32, 0.9, 0.035, 0.05, '#f2c230');
+  B.box(0.62, 0.9, -0.32, 0.12, 0.07, 0.1, '#555');
+  B.box(-0.1, 0.62, -0.32, 0.004, 0.35, 0.004, '#333');
+  return B.build();
+})();
+function siteMatrix(b, sy, crane = false) {
+  const diag = b.da !== undefined && b.da !== null;
+  _q.setFromAxisAngle(_up, diag ? b.da : ROT[b.rot] ?? 0);
+  if (diag && b.px !== null && b.px !== undefined) _p.set(b.px - N / 2 + 0.5, b.top, b.py - N / 2 + 0.5);
+  else _p.set(tw(b.x) + (b.w - 1) / 2, b.top, tw(b.y) + (b.h - 1) / 2);
+  const h = crane ? b.mh * 1.25 + 0.4 : Math.max(0.05, sy);
+  _s.set(b.w, h, b.h);
+  return _m.compose(_p, _q, _s);
+}
+function endSite(b) {
+  if (b.site_) { pools.remove(b.site_); b.site_ = null; }
+  if (b.crane_) { pools.remove(b.crane_); b.crane_ = null; }
+}
+// tiempo de obra en segundos de juego: más alto, más demora
+const buildTime = (b) => 4 + b.mh * 2.2;
+
 function attach(b) {
   const pad = padOf(b.x, b.y, b.w, b.h);
   b.top = pad.top;
   const geomFn = b.kind === 'pub' ? () => buildPublic(b.key) : () => buildModel({ kind: b.kind, type: b.type, e: b.kind === 'ind' ? 3 : b.e, v: b.v });
-  b.h_ = pools.add(modelKey(b), geomFn, bldMatrix(b, 0.02));
+  const geom = geomFn();
+  b.mh = Math.max(0.15, geom.boundingBox ? geom.boundingBox.max.y : 0.5); // altura del modelo
+  b.h_ = pools.add(modelKey(b), () => geom, bldMatrix(b, 0.001));
+  b.site_ = pools.add('site', () => siteGeom, siteMatrix(b, 0.05));
+  if (b.mh > 1.2) b.crane_ = pools.add('crane', () => craneGeom, siteMatrix(b, 1, true));
   if (pad.slope > 0.02) {
     _q.identity();
     _p.set(tw(b.x) + (b.w - 1) / 2, pad.bot - 0.06, tw(b.y) + (b.h - 1) / 2);
@@ -187,6 +232,7 @@ function attach(b) {
 function detach(b) {
   if (b.h_) { pools.remove(b.h_); b.h_ = null; }
   if (b.pad_) { pools.remove(b.pad_); b.pad_ = null; }
+  endSite(b);
   const k = G.growing.indexOf(b);
   if (k >= 0) G.growing.splice(k, 1);
 }
@@ -715,13 +761,18 @@ export function step(n = 1) {
 
 export function update(dt) {
   flush();
+  // obras: excavación (andamio bajo), estructura que sube dentro del andamio y retiro del andamio
+  const gdt = dt * G.speed;
   for (let i = G.growing.length - 1; i >= 0; i--) {
     const b = G.growing[i];
-    b.grow = Math.min(1, b.grow + dt * 2.2);
+    if (b.grow < 0.999) b.grow = Math.min(1, b.grow + gdt / buildTime(b));
+    else b.grow = 1;
     const t = b.grow;
-    const sy = t >= 1 ? 1 : Math.max(0.02, 1 - Math.pow(1 - t, 3) * (1 + 0.15 * Math.sin(t * 6)));
+    const rise = Math.min(1, Math.max(0, (t - 0.12) / 0.8));
+    const sy = t >= 1 ? 1 : Math.max(0.001, rise * rise * (3 - 2 * rise));
     if (b.h_) pools.set(b.h_, bldMatrix(b, sy));
-    if (t >= 1) G.growing.splice(i, 1);
+    if (b.site_) pools.set(b.site_, siteMatrix(b, Math.min(b.mh + 0.05, b.mh * sy + 0.12)));
+    if (t >= 1) { endSite(b); G.growing.splice(i, 1); }
   }
   pools.flush();
   if (G.speed > 0) {

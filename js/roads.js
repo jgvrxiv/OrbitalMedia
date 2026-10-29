@@ -418,7 +418,10 @@ function planJunctions(net) {
   const list = [], covered = new Set(), trim = new Map();
   for (const [key, node] of net.nodes) {
     const segs = node.segs.map((id) => net.byId.get(id)).filter(Boolean);
-    if (segs.length < 2 || !segs.some((s) => s.ax === 3)) continue;
+    // cruces (y esquinas en L) de cualquier tipo de vía: se dibujan como polígono con esquinas curvas
+    if (segs.length < 2) continue;
+    if (segs.length === 2 && !segs.some((s) => s.ax === 3) && segs[0].ax === segs[1].ax) continue; // tramo recto o cambio de tipo
+    if (segs.every((s) => s.k === 'tierra' || s.k === 'peatonal')) continue;
     const arms = segs.map((seg) => {
       const atStart = seg.ax === 1 ? seg.s0 === node.y : seg.s0 === node.x;
       const sgn = atStart ? 1 : -1;
