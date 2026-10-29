@@ -9,7 +9,8 @@ const OPCIONES = [
   { v: -1, t: "En desacuerdo" },
   { v: -2, t: "Muy en desacuerdo" },
 ];
-const NO_SE = { v: null, t: "No sé / prefiero no responder" };
+const MIN_COMPARADAS = 3;
+const NO_SE ={ v: null, t: "No sé / prefiero no responder" };
 
 const $ = (id) => document.getElementById(id);
 const estado = { ideologia: null, eleccion: null, modo: null, i: 0, resp: [] };
@@ -148,7 +149,7 @@ function afinidadCandidato(preguntas, resp, cand) {
     dif += Math.abs(resp[i] - c);
     n++;
   });
-  return n ? Math.round(100 * (1 - dif / (4 * n))) : 0;
+  return { afinidad: n ? Math.round(100 * (1 - dif / (4 * n))) : null, comparadas: n };
 }
 
 const etiqueta = (v) => (v == null ? "—" : OPCIONES.find((o) => o.v === v).t);
@@ -156,8 +157,10 @@ const etiqueta = (v) => (v == null ? "—" : OPCIONES.find((o) => o.v === v).t);
 function resultadoEleccion() {
   const e = estado.eleccion;
   const ranking = e.candidatos
-    .map((c) => ({ ...c, afinidad: afinidadCandidato(e.preguntas, estado.resp, c) }))
-    .sort((a, b) => b.afinidad - a.afinidad);
+    .map((c) => ({ ...c, ...afinidadCandidato(e.preguntas, estado.resp, c) }))
+    // Con pocos temas comparados el porcentaje no es confiable: esos van al final.
+    .sort((a, b) => (b.comparadas >= MIN_COMPARADAS) - (a.comparadas >= MIN_COMPARADAS) || (b.afinidad ?? -1) - (a.afinidad ?? -1));
+  const lider = ranking[0].comparadas >= MIN_COMPARADAS ? ranking[0] : null;
   const respondidas = estado.resp.filter((v) => v != null).length;
 
   const tabla = (c) => `<details><summary>Ver pregunta por pregunta</summary><table>
@@ -172,20 +175,20 @@ function resultadoEleccion() {
   $("resultado").innerHTML = `
     ${e.aviso ? `<p class="aviso">${e.aviso}</p>` : ""}
     <p class="tema">${e.cargo} · ${e.nombre}</p>
-    <h1>Coincides más con ${ranking[0].nombre}</h1>
+    <h1>${lider ? `Coincides más con ${lider.nombre}` : "Aún no hay datos suficientes para comparar"}</h1>
     <p class="nota">Basado en ${respondidas} de ${e.preguntas.length} preguntas respondidas. Datos actualizados el ${e.actualizado}.</p>
     <div class="caja">
       ${ranking.map((c) => `<div class="cand">
-        <div><strong>${c.nombre}</strong><br><small>${c.partido}</small></div>
-        <div class="pct">${c.afinidad}%</div>
-        <div class="barra"><div style="width:${c.afinidad}%;background:${c.color}"></div></div>
+        <div><strong>${c.nombre}</strong><br><small>${c.partido} · ${c.comparadas ? `${c.comparadas} ${c.comparadas === 1 ? "tema comparado" : "temas comparados"}` : "sin posiciones conocidas aún"}</small></div>
+        <div class="pct">${c.afinidad == null ? "—" : c.afinidad + "%"}</div>
+        <div class="barra"><div style="width:${c.afinidad ?? 0}%;background:${c.color}"></div></div>
         <div style="grid-column:1/-1">${tabla(c)}</div>
       </div>`).join("")}
     </div>
     <p class="nota">Esto mide coincidencia de posiciones, no es una recomendación de voto. Revisa los programas completos.</p>
     <div class="acciones">
       <button class="btn" data-ir="ideologia">Hacer el test ideológico</button>
-      <button class="sec" data-compartir="${encodeURIComponent(`Coincido ${ranking[0].afinidad}% con ${ranking[0].nombre} en Brújula Colombia.`)}">Copiar resultado</button>
+      ${lider ? `<button class="sec" data-compartir="${encodeURIComponent(`Coincido ${lider.afinidad}% con ${lider.nombre} en Brújula Colombia.`)}">Copiar resultado</button>` : ""}
       <button class="sec" data-ir="inicio">Volver al inicio</button>
     </div>`;
   mostrar("resultado");

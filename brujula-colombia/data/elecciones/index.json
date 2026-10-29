@@ -1,6 +1,7 @@
 {
-  "activa": "ejemplo-2026",
+  "activa": "bogota-alcaldia-2027",
   "elecciones": [
+    { "id": "bogota-alcaldia-2027", "archivo": "bogota-alcaldia-2027.json" },
     { "id": "ejemplo-2026", "archivo": "ejemplo-2026.json" }
   ]
 }

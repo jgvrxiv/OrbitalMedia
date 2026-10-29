@@ -1,0 +1,72 @@
+{
+  "id": "bogota-alcaldia-2027",
+  "nombre": "Elecciones regionales 2027 (nombres que suenan)",
+  "cargo": "Alcaldía de Bogotá",
+  "fecha": "2027-10",
+  "aviso": "BORRADOR. Ninguna candidatura está confirmada: son nombres que suenan en prensa (oct. 2026). Las posiciones cargadas son una estimación editorial a partir de su trayectoria conocida y están pendientes de verificar con fuente. Si un aspirante no tiene posición pública conocida en un tema, ese tema no cuenta para él.",
+  "actualizado": "2026-10-29",
+  "preguntas": [
+    { "id": "metro-subterraneo", "tema": "Movilidad", "texto": "La primera línea del Metro debió ser subterránea y no elevada." },
+    { "id": "septima-tm", "tema": "Movilidad", "texto": "La carrera Séptima debería tener TransMilenio." },
+    { "id": "van-der-hammen", "tema": "Ambiente", "texto": "Se debería permitir urbanizar parte de la reserva Thomas van der Hammen." },
+    { "id": "pie-fuerza", "tema": "Seguridad", "texto": "La prioridad en seguridad es más policías y más presencia de fuerza pública en las calles." },
+    { "id": "cobro-congestion", "tema": "Movilidad", "texto": "Bogotá debería cobrar por circular en zonas congestionadas." },
+    { "id": "densificacion", "tema": "Urbanismo", "texto": "La ciudad debe crecer más hacia arriba (edificios altos) que hacia los bordes." },
+    { "id": "ventas-informales", "tema": "Espacio público", "texto": "Hay que recuperar el espacio público aunque implique retirar vendedores informales." },
+    { "id": "cupo-endeudamiento", "tema": "Finanzas", "texto": "El Distrito debería endeudarse más para acelerar obras grandes." },
+    { "id": "gobierno-nacional", "tema": "Política", "texto": "La Alcaldía debe alinearse con el Gobierno nacional del Pacto Histórico." },
+    { "id": "ciclovias", "tema": "Movilidad", "texto": "Hay que seguir ampliando las ciclorrutas aunque se quiten carriles a los carros." }
+  ],
+  "candidatos": [
+    {
+      "id": "claudia-lopez", "nombre": "Claudia López", "partido": "Exalcaldesa (2020-2023)", "color": "#3bb273",
+      "respuestas": { "metro-subterraneo": -1, "septima-tm": -1, "van-der-hammen": -2, "cobro-congestion": 1, "ciclovias": 2, "gobierno-nacional": -1 },
+      "fuentes": {}
+    },
+    {
+      "id": "enrique-penalosa", "nombre": "Enrique Peñalosa", "partido": "Exalcalde (1998-2000, 2016-2019)", "color": "#2e86ab",
+      "respuestas": { "metro-subterraneo": -2, "septima-tm": 2, "van-der-hammen": 2, "densificacion": 2, "ventas-informales": 2, "cobro-congestion": 2, "ciclovias": 2, "gobierno-nacional": -2 },
+      "fuentes": {}
+    },
+    {
+      "id": "juan-daniel-oviedo", "nombre": "Juan Daniel Oviedo", "partido": "Exconcejal, exdirector del DANE", "color": "#f3a712",
+      "respuestas": { "gobierno-nacional": -1 },
+      "fuentes": {}
+    },
+    {
+      "id": "paloma-valencia", "nombre": "Paloma Valencia", "partido": "Centro Democrático", "color": "#1f4e9c",
+      "respuestas": { "pie-fuerza": 2, "gobierno-nacional": -2 },
+      "fuentes": {}
+    },
+    {
+      "id": "daniel-briceno", "nombre": "Daniel Briceño", "partido": "Centro Democrático", "color": "#5a7fbf",
+      "respuestas": { "pie-fuerza": 2, "gobierno-nacional": -2 },
+      "fuentes": {}
+    },
+    {
+      "id": "rodrigo-lara", "nombre": "Rodrigo Lara", "partido": "Exministro del Interior", "color": "#8d6a9f",
+      "respuestas": {},
+      "fuentes": {}
+    },
+    {
+      "id": "maria-jose-pizarro", "nombre": "María José Pizarro", "partido": "Pacto Histórico (posible consulta)", "color": "#c2185b",
+      "respuestas": { "metro-subterraneo": 2, "gobierno-nacional": 2 },
+      "fuentes": {}
+    },
+    {
+      "id": "susana-muhamad", "nombre": "Susana Muhamad", "partido": "Pacto Histórico (posible consulta)", "color": "#2e7d32",
+      "respuestas": { "metro-subterraneo": 2, "van-der-hammen": -2, "gobierno-nacional": 2 },
+      "fuentes": {}
+    },
+    {
+      "id": "carlos-carrillo", "nombre": "Carlos Carrillo", "partido": "Pacto Histórico (posible consulta)", "color": "#e4572e",
+      "respuestas": { "metro-subterraneo": 2, "gobierno-nacional": 2 },
+      "fuentes": {}
+    },
+    {
+      "id": "gustavo-bolivar", "nombre": "Gustavo Bolívar", "partido": "Pacto Histórico (posible consulta)", "color": "#d1495b",
+      "respuestas": { "metro-subterraneo": 2, "gobierno-nacional": 2 },
+      "fuentes": {}
+    }
+  ]
+}
