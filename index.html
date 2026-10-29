@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ciudad Tricolor · City Builder Colombiano</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="app">
+  <canvas id="c"></canvas>
+
+  <header id="top">
+    <div class="brand"><span class="flag"><i></i><i></i><i></i></span><b>Ciudad Tricolor</b></div>
+    <div class="stat" title="Dinero"><span>💰</span><b id="sMoney">$0</b><small id="sNet"></small></div>
+    <div class="stat" title="Población"><span>👥</span><b id="sPop">0</b></div>
+    <div class="stat" title="Felicidad"><span id="sFace">🙂</span><b id="sHappy">50%</b></div>
+    <div class="stat" title="Empleo (empleos / trabajadores)"><span>💼</span><b id="sEmp">100%</b></div>
+    <div class="stat" title="Fecha"><span>📅</span><b id="sDate">ene · año 1</b></div>
+    <div class="spacer"></div>
+    <div class="speed">
+      <button data-speed="0" title="Pausa (Espacio)">⏸</button>
+      <button data-speed="1" class="on">▶</button>
+      <button data-speed="2">⏩</button>
+      <button data-speed="4">⏭</button>
+    </div>
+    <div class="menu">
+      <button id="bDemo" title="Generar una ciudad de ejemplo">🏙️ Ejemplo</button>
+      <button id="bSave">💾</button>
+      <button id="bLoad">📂</button>
+      <button id="bNew" title="Ciudad nueva">🗑️</button>
+      <button id="bHelp">❓</button>
+    </div>
+  </header>
+
+  <aside id="tools"></aside>
+
+  <aside id="side">
+    <nav class="tabs">
+      <button data-tab="city" class="on">Ciudad</button>
+      <button data-tab="info">Selección</button>
+      <button data-tab="lines">Rutas</button>
+    </nav>
+    <div id="tab-city" class="tab"></div>
+    <div id="tab-info" class="tab" hidden></div>
+    <div id="tab-lines" class="tab" hidden></div>
+  </aside>
+
+  <div id="banner"></div>
+  <div id="lineBar" hidden>
+    <b id="lineTitle">Nueva línea</b>
+    <span id="lineInfo"></span>
+    <button id="lineDone" class="go">Terminar (Enter)</button>
+    <button id="lineUndo">Deshacer</button>
+    <button id="lineCancel">Cancelar (Esc)</button>
+  </div>
+  <div id="tip" hidden></div>
+  <div id="toasts"></div>
+
+  <div id="help" class="modal" hidden>
+    <div class="card">
+      <h2>🇨🇴 Bienvenido a Ciudad Tricolor</h2>
+      <p>Construye una ciudad colombiana desde las invasiones del estrato 1 hasta los rascacielos y mansiones del estrato 6.</p>
+      <ol>
+        <li><b>Vías:</b> elige <i>Calle</i> y arrastra para trazar. Todo crece junto a las calles.</li>
+        <li><b>Zonas:</b> pinta rectángulos de <b>Estrato 1 a 6</b> o <b>Comercio</b>. Los edificios aparecen solos y mejoran de nivel.</li>
+        <li><b>Servicios:</b> los estratos altos exigen más servicios cerca (colegio, salud, seguridad, parques, cultura, bomberos, mercado, transporte). El estrato 6 pide 4 o más.</li>
+        <li><b>Transporte:</b> pon <i>paraderos</i> sobre las calles o <i>estaciones de Metrocable</i> en lotes libres; luego crea una <i>línea</i> haciendo clic en las paradas en orden y pulsando Enter. Añade buses o cabinas desde la pestaña <b>Rutas</b>.</li>
+        <li><b>Economía:</b> el estrato 1 recibe subsidios y los estratos 5 y 6 aportan más impuestos (¡como en Colombia!). Equilibra el presupuesto.</li>
+      </ol>
+      <p class="keys"><b>Controles:</b> clic derecho + arrastrar = girar · rueda = zoom · WASD/flechas o arrastrar con Inspeccionar = mover · Q/E = girar · Espacio = pausa · G = cuadrícula · Esc = cancelar</p>
+      <div class="row"><button id="helpDemo">🏙️ Ver ciudad de ejemplo</button><button id="helpClose" class="go">¡A construir!</button></div>
+    </div>
+  </div>
+</div>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
