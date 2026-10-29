@@ -4,7 +4,7 @@ import { S, N, tw, setPreview, panCamera, pickTile, padOf, setTime } from './sce
 import { mats } from './geom.js';
 import {
   G, COST, ZONES, MONTHS, DENS_NAME, ESTRATO_COLORS, CATS, fmt, coverageAt, rectTiles, zoneOk, paintZone,
-  canPlacePublic, placePublic, bulldoze, removeBuilding, markDirty, flush, buildRoad, roadTileCheck,
+  canPlacePublic, placePublic, bulldoze, removeBuilding, markDirty, flush, buildRoad, roadTileCheck, junctionNear, isRound, toggleRound, ROUND_COST,
   zoneProblem, estratoOf, buildingLabel, refreshOverlay, idx,
 } from './game.js';
 import { ROADS, ROAD_ORDER, roadPlan, diagLines } from './roads.js';
@@ -38,6 +38,9 @@ const CATEGORIES = [
     { title: 'Locales · 12 m', items: ['tierra', 'peatonal', 'calle', 'calle1', 'calle3'].map(roadItem) },
     { title: 'Arterias · 24-36 m', items: ['avenida', 'avenida6', 'bulevar'].map(roadItem) },
     { title: 'Troncales y autopistas', items: ['troncal', 'autopista'].map(roadItem) },
+    { title: 'Intersecciones', items: [
+      { icon: '🔄', name: 'Glorieta', sub: 'Clic sobre un cruce de 3 o más vías; otro clic la quita', price: fmt(ROUND_COST), tool: { type: 'round' } },
+    ] },
   ] },
   { id: 'zones', icon: '🏘️', label: 'Zonas', groups: [
     { title: 'Residencial', items: zoneItems('r') },
@@ -190,6 +193,7 @@ export function setTool(t) {
     road: () => `${ROADS[t.k].name}: arrastra para trazar en línea recta (${u2m(ROADS[t.k].w)} m de ancho)` + (ROADS[t.k].w === 1 ? ". Si arrastras cerca de 45° se traza en diagonal" : ""),
     zone: () => `Arrastra un rectángulo: ${ZONES[t.z].name}. El estrato lo define el valor del suelo.`,
     pub: () => `${PUBLIC[t.key].name}: debe quedar junto a una vía · ${PUBLIC[t.key].desc}`,
+    round: 'Glorieta: haz clic sobre un cruce de 3 o más vías (otro clic sobre la glorieta la quita)',
     stop: () => (t.st === 'bus' ? 'Haz clic en una calle, avenida o troncal para poner un paradero' : 'Haz clic en un lote libre para poner una estación de Metrocable'),
     line: () => 'Haz clic en las paradas en el orden del recorrido. Enter para terminar.',
   }[t.type];
@@ -288,6 +292,10 @@ function updatePreview() {
     setPreview(c.tiles.length ? c.tiles : [{ x: h.x, y: h.y, ok: false }]);
     if (c.tiles.length) showGhost(T0.key, o.x, o.y, c.rot); else removeGhost();
     info.textContent = `${PUBLIC[T0.key].name} · ${fmt(PUBLIC[T0.key].cost)}` + (c.noRoad ? ' · ¡necesita una vía al lado!' : c.steep ? ' · terreno muy inclinado' : '');
+  } else if (T0.type === 'round') {
+    const n = junctionNear(h.x, h.y);
+    setPreview(n ? [{ x: n.x, y: n.y, ok: true, color: isRound(n) ? '#ffb02e' : '#37d67a' }] : [{ x: h.x, y: h.y, ok: false }]);
+    info.textContent = n ? (isRound(n) ? 'Clic para quitar la glorieta' : `Glorieta · ${fmt(ROUND_COST)}`) : 'Acerca el cursor a un cruce de 3 o más vías';
   } else if (T0.type === 'stop') {
     setPreview([{ x: h.x, y: h.y, ok: TR.stopOk(T0.st, h.x, h.y) }]);
   } else if (T0.type === 'inspect') {
@@ -335,6 +343,10 @@ function clickTile(t) {
   if (T0.type === 'pub') {
     const o = origin(t, T0.key);
     placePublic(T0.key, o.x, o.y);
+  } else if (T0.type === 'round') {
+    const msg = toggleRound(t.x, t.y);
+    if (msg) toast(msg, 'warn');
+    updatePreview();
   } else if (T0.type === 'stop') {
     TR.addStop(T0.st, t.x, t.y);
   } else if (T0.type === 'line') {

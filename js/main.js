@@ -68,14 +68,15 @@ function loadSave(silent) {
     TR.clearAll();
     clearGame();
     setTerrain(d.game.terrain || 'valle', d.game.seed || 7);
-    loadGame(d.game);
+    const res = loadGame(d.game);
     TR.load(d.transit);
     TR.recomputeAll();
     flush();
     refresh();
-    if (!silent) toast('Partida cargada 📂', 'good');
+    if (res.skipped) toast(`Partida cargada; ${res.skipped} edificios de una versión anterior se omitieron y volverán a crecer`, 'warn');
+    else if (!silent) toast('Partida cargada 📂', 'good');
     return true;
-  } catch (e) { console.error(e); if (!silent) toast('Partida corrupta', 'warn'); return false; }
+  } catch (e) { console.error(e); if (!silent) toast(String(e.message).includes('versión') ? e.message : 'Partida corrupta', 'warn'); return false; }
 }
 function newCity(kind = 'valle', seed = 7) {
   TR.clearAll();

@@ -1,6 +1,7 @@
 // Modelos residenciales. La TIPOLOGÍA depende de la densidad (baja/media/alta) y el ESTRATO
 // (1-6, según el valor del suelo) define acabados, materiales y entorno. Un conjunto puede ser estrato 2 o 6.
 import { CELL, shade } from './geom.js';
+import { ROW_TYPES, ROW_TABLE } from './models_row.js';
 import { REF_RES, REF_RES_TABLE } from './models_ref.js';
 import {
   F, PAL, lot, path, fence, tank, rebar, parapet, dish, antenna, acUnit, hvac, laundry, balcony, car, pool,
@@ -267,7 +268,7 @@ function multifamiliar(B, e) {
   const r = B.r;
   lot(B, Math.max(1, e - 1));
   const floors = r.int(3, 4);
-  const w = 0.86, d = 0.72, z = -0.04;
+  const w = 0.99, d = 0.72, z = -0.04;
   const raw = r.pick(PAL.brick);
   const floorCol = Array.from({ length: floors }, () => (r() < (e <= 1 ? 0.45 : 0.75) ? wallOf(r, 2) : raw));
   B.box(0, 0, z, w, floors * F, d, raw, {
@@ -633,6 +634,15 @@ const TABLE = {
     6: [['torreVidrio', 0.5], ['torreEscalonada', 0.3], ['torresGemelas', 0.2]],
   },
 };
+
+// vivienda continua de estratos 1-3 (models_row.js): reemplaza a las casas aisladas en los estratos bajos
+Object.assign(RES_TYPES, ROW_TYPES);
+for (const [d, byE] of Object.entries(ROW_TABLE)) {
+  for (const [e, list] of Object.entries(byE)) {
+    const replace = (d === '1' && e <= 2) || (d === '2' && e === '1');
+    TABLE[d][e] = replace ? list : [...(TABLE[d][e] || []), ...list];
+  }
+}
 
 // modelos basados en las fotos de referencia
 Object.assign(RES_TYPES, REF_RES);

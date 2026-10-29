@@ -30,7 +30,7 @@ function tiendaBarrio(B, e) {
   lot(B, Math.min(e, 2));
   const paint = r.pick(PAL.wall[2]);
   const two = r() < 0.6;
-  const w = 0.8, d = 0.6, z = -0.1;
+  const w = 0.99, d = 0.6, z = -0.1;
   B.box(0, 0, z, w, F, d, paint, {
     fl: 1, cw: 0.2,
     pick: (f, c, Fn, C, side) => (side === 'front' ? (c === C - 1 ? CELL.DOOR : CELL.SHOP_GRILL) : side === 'back' ? CELL.WIN_BARS : r() < 0.4 ? CELL.WIN_BARS : CELL.PLAIN),
@@ -62,7 +62,7 @@ function panaderia(B, e) {
   paved(B, '#c7c2b6');
   const paint = r.pick(e <= 2 ? PAL.wall[2] : PAL.wall[3]);
   const c1 = r.pick(PAL.bright);
-  const w = 0.82, d = 0.6, z = -0.12;
+  const w = 0.99, d = 0.6, z = -0.12;
   const fl = r() < 0.5 ? 2 : 1;
   B.box(0, 0, z, w, F * 1.1, d, paint, { fl: 1, cw: 0.205, pick: (f, c, Fn, C, side) => (side === 'front' ? (c === 1 ? CELL.DOOR_GLASS : CELL.SHOP) : CELL.PLAIN) });
   if (fl === 2) {
@@ -104,7 +104,7 @@ function locales(B, e) {
   paved(B, e <= 2 ? '#b3ae9f' : '#c3beb2');
   const floors = r.int(2, 3) + (e >= 3 ? 1 : 0);
   const paint = r.pick(e <= 2 ? [...PAL.wall[2], ...PAL.brick] : PAL.wall[3]);
-  const w = 0.9, d = 0.74, z = -0.06;
+  const w = 0.99, d = 0.74, z = -0.06;
   const cols = 4;
   B.box(0, 0, z, w, F * 1.15, d, shade(paint, 0.9), { fl: 1, cw: w / cols, pick: (f, c, Fn, C, side) => (side === 'front' ? (e <= 2 ? CELL.SHOP_GRILL : CELL.SHOP) : CELL.PLAIN) });
   B.box(0, F * 1.15, z, w, (floors - 1) * F, d, paint, {

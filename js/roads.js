@@ -438,7 +438,26 @@ export function planJunctions(net) {
     arms.sort((p, q) => Math.atan2(p.d[1], p.d[0]) - Math.atan2(q.d[1], q.d[0]));
     const n = arms.length;
     for (const a of arms) a.raw = 0.5;
-    for (let i = 0; i < n; i++) {
+    // glorieta: el cruce se convierte en un anillo; cada brazo se corta donde su borde toca el andén del anillo
+    let round = null;
+    if (net.rounds && net.rounds.has(key) && n >= 3) {
+      const c = [arms.reduce((s, a) => s + a.o[0], 0) / n, arms.reduce((s, a) => s + a.o[1], 0) / n];
+      const maxhw = Math.max(...arms.map((a) => a.hw.full));
+      const Rs = Math.max(1.7, maxhw + 0.95); // radio exterior del andén
+      const Ro = Rs - 0.2; // borde exterior de la calzada del anillo
+      const Ri = Math.max(0.35, Ro - 0.85); // isla central
+      round = { c, Rs, Ro, Ri };
+      for (const a of arms) {
+        const proj = (c[0] - a.o[0]) * a.d[0] + (c[1] - a.o[1]) * a.d[1];
+        const lat = (c[0] - a.o[0]) * -a.d[1] + (c[1] - a.o[1]) * a.d[0];
+        const edge = (e, R) => proj + Math.sqrt(Math.max(0, R * R - (lat - e) * (lat - e)));
+        // los dos bordes del brazo (andén) deben quedar fuera del círculo de radio Rs
+        a.raw = Math.max(edge(a.hw.full, Rs), edge(-a.hw.full, Rs)) - 0.05;
+        a.tin = Math.min(edge(a.hw.cw, Ro - 0.12), edge(-a.hw.cw, Ro - 0.12)) - 0.08; // inicio de la calzada del brazo
+        a.lat = lat; a.proj = proj;
+      }
+    }
+    for (let i = 0; i < (round ? 0 : n); i++) {
       const a = arms[i], b = arms[(i + 1) % n];
       const na = [-a.d[1], a.d[0]], nb = [-b.d[1], b.d[0]];
       const c = isect([a.o[0] + na[0] * a.hw.full, a.o[1] + na[1] * a.hw.full], a.d, [b.o[0] - nb[0] * b.hw.full, b.o[1] - nb[1] * b.hw.full], b.d);
@@ -448,10 +467,10 @@ export function planJunctions(net) {
       if (ta > 0 && tb > 0 && ta < 4 && tb < 4) { a.raw = Math.max(a.raw, ta); b.raw = Math.max(b.raw, tb); }
     }
     for (const a of arms) {
-      if (a.diag) a.cut = a.raw + 0.45; // espacio para la curva de la esquina
+      if (a.diag) a.cut = a.raw + (round ? 0.05 : 0.45); // espacio para la curva de la esquina
       else {
         // las casillas rectas se dibujan enteras: el corte se lleva al borde de casilla siguiente
-        const kmax = Math.max(0, Math.ceil(a.raw + 0.3 - 0.5 - 1e-6));
+        const kmax = Math.max(0, Math.ceil(a.raw + (round ? 0.05 : 0.3) - 0.5 - 1e-6));
         a.cut = kmax + 0.5;
         for (let k = 0; k <= kmax; k++) for (const off of a.seg.offs) {
           const s0 = (a.seg.ax === 0 ? node.x : node.y) + k * a.d[a.seg.ax === 0 ? 0 : 1];
@@ -461,7 +480,7 @@ export function planJunctions(net) {
       }
     }
     for (const a of arms) if (a.diag) trim.set(key + ':' + a.seg.id, a.cut);
-    list.push({ node, arms });
+    list.push({ node, arms, round });
   }
   return { list, covered, trim };
 }
@@ -528,6 +547,7 @@ function fitPlane(pts) {
 }
 
 function drawJunction(B, j) {
+  if (j.round) return drawRound(B, j);
   const L = 0.03;
   const W = (p) => [p[0] - N / 2 + 0.5, p[1] - N / 2 + 0.5];
   const cx = j.arms.reduce((s, a) => s + a.o[0], 0) / j.arms.length, cy = j.arms.reduce((s, a) => s + a.o[1], 0) / j.arms.length;
@@ -561,6 +581,82 @@ function drawJunction(B, j) {
       const q = (u, v) => W([a.o[0] + a.d[0] * u + n[0] * v, a.o[1] + a.d[1] * u + n[1] * v]);
       const y = (p) => [p[0], hp(p[0], p[1], L + 0.047), p[1]];
       B.quad(y(q(a.raw + 0.22, t0)), y(q(a.raw + 0.22, t1)), y(q(a.raw + 0.38, t1)), y(q(a.raw + 0.38, t0)), WHITE);
+    }
+  }
+}
+
+// ---------- glorieta ----------
+function drawRound(B, j) {
+  const L = 0.03;
+  const { c, Rs, Ro, Ri } = j.round;
+  const W = (p) => [p[0] - N / 2 + 0.5, p[1] - N / 2 + 0.5];
+  const [cx, cz] = W(c);
+  // plano ajustado al terreno bajo el círculo (como en los cruces)
+  const sample = [];
+  for (let k = 0; k < 16; k++) { const a = (k / 16) * Math.PI * 2; sample.push([cx + Math.cos(a) * Rs, cz + Math.sin(a) * Rs]); }
+  const pl = fitPlane([...sample, [cx, cz]]);
+  const hp = (x, z, lift) => pl.a + pl.b * x + pl.c * z + lift;
+  const SEG = 36;
+  const disc = (r, lift, color) => {
+    for (let k = 0; k < SEG; k++) {
+      const a0 = (k / SEG) * Math.PI * 2, a1 = ((k + 1) / SEG) * Math.PI * 2;
+      const p0 = [cx + Math.cos(a0) * r, cz + Math.sin(a0) * r], p1 = [cx + Math.cos(a1) * r, cz + Math.sin(a1) * r];
+      B.tri([cx, hp(cx, cz, lift), cz], [p1[0], hp(p1[0], p1[1], lift), p1[1]], [p0[0], hp(p0[0], p0[1], lift), p0[1]], color);
+    }
+  };
+  const wall = (r, lo, hi, color) => {
+    for (let k = 0; k < SEG; k++) {
+      const a0 = (k / SEG) * Math.PI * 2, a1 = ((k + 1) / SEG) * Math.PI * 2;
+      const p0 = [cx + Math.cos(a0) * r, cz + Math.sin(a0) * r], p1 = [cx + Math.cos(a1) * r, cz + Math.sin(a1) * r];
+      B.quad([p0[0], hp(p0[0], p0[1], lo), p0[1]], [p1[0], hp(p1[0], p1[1], lo), p1[1]], [p1[0], hp(p1[0], p1[1], hi), p1[1]], [p0[0], hp(p0[0], p0[1], hi), p0[1]], color);
+    }
+  };
+  const k = j.arms.reduce((best, a) => (ROADS[a.seg.k].rank > ROADS[best.seg.k].rank ? a : best)).seg.k;
+  // andén exterior, calzada del anillo, bordillo de la isla, isla con césped
+  disc(Rs, L + 0.035, COL.walk);
+  // brazos: andén y calzada desde el anillo hasta el corte
+  for (const a of j.arms) {
+    const n = [-a.d[1], a.d[0]];
+    const seg = (hw, lift, color) => {
+      const t0 = Math.max(0, (a.tin ?? 0)), t1 = a.cut + 0.02;
+      const P = (t, v) => W([a.o[0] + a.d[0] * t + n[0] * v, a.o[1] + a.d[1] * t + n[1] * v]);
+      const A = P(t0, -hw), Bp = P(t0, hw), C = P(t1, hw), D = P(t1, -hw);
+      const y = (p) => [p[0], hp(p[0], p[1], lift), p[1]];
+      B.quad(y(A), y(Bp), y(C), y(D), color);
+    };
+    seg(a.hw.full, L + 0.035, COL.walk);
+    seg(a.hw.cw, L + 0.04, ROADS[a.seg.k].color);
+  }
+  disc(Ro, L + 0.042, ROADS[k].color);
+  // marcas del anillo: línea discontinua
+  for (let q = 0; q < 24; q++) {
+    if (q % 2) continue;
+    const a0 = (q / 24) * Math.PI * 2, a1 = ((q + 1) / 24) * Math.PI * 2, rm = (Ro + Ri) / 2;
+    const pts = [[rm - 0.015, a0], [rm + 0.015, a0], [rm + 0.015, a1], [rm - 0.015, a1]].map(([r, a]) => [cx + Math.cos(a) * r, cz + Math.sin(a) * r]);
+    const y = (p) => [p[0], hp(p[0], p[1], L + 0.046), p[1]];
+    B.quad(y(pts[0]), y(pts[1]), y(pts[2]), y(pts[3]), WHITE);
+  }
+  // isla central: bordillo, césped, árboles y palmas
+  disc(Ri + 0.07, L + 0.05, COL.walk);
+  wall(Ri + 0.07, L + 0.042, L + 0.05, '#9d9a92');
+  disc(Ri, L + 0.056, '#6aa84f');
+  const cnt = Math.max(3, Math.round(Ri * 6));
+  for (let q = 0; q < cnt; q++) {
+    const a = (q / cnt) * Math.PI * 2 + 0.4, rr = Ri * 0.55;
+    const px = cx + Math.cos(a) * rr, pz = cz + Math.sin(a) * rr;
+    B.palm(px, pz, 0.55, false, hp(px, pz, L + 0.056));
+  }
+  B.bush(cx, cz, 0.1, '#3f8f3a', hp(cx, cz, L + 0.056));
+  // cebras en cada brazo, justo antes del anillo
+  for (const a of j.arms) {
+    if (a.seg.k === 'tierra' || a.seg.k === 'peatonal') continue;
+    const n = [-a.d[1], a.d[0]];
+    const cn = Math.max(3, Math.round((a.hw.cw * 2) / 0.17));
+    for (let i = 0; i < cn; i++) {
+      const t0 = -a.hw.cw + (i + 0.2) * ((2 * a.hw.cw) / cn), t1 = t0 + 0.6 * ((2 * a.hw.cw) / cn);
+      const q = (u, v) => W([a.o[0] + a.d[0] * u + n[0] * v, a.o[1] + a.d[1] * u + n[1] * v]);
+      const y = (p) => [p[0], hp(p[0], p[1], L + 0.048), p[1]];
+      B.quad(y(q(a.raw + 0.07, t0)), y(q(a.raw + 0.07, t1)), y(q(a.raw + 0.23, t1)), y(q(a.raw + 0.23, t0)), WHITE);
     }
   }
 }

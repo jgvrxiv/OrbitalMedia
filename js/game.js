@@ -11,7 +11,7 @@ import { InstPools } from './render.js';
 import { ROADS, buildRoadMesh } from './roads.js';
 import { buildParcels } from './parcels.js';
 import { createNet, lanesOf, addSegment, removeCell, rasterize, netFromTiles, serializeNet, loadNet, crossLevels } from './roadnet.js';
-import { buildModel, VARIANTS, typeName } from './models.js';
+import { buildModel, VARIANTS, typeName, hasModel } from './models.js';
 import { pickResType, resPop } from './models_res.js';
 import { pickComType, COM_JOBS, COM_TYPES, tierOf } from './models_com.js';
 import { pickIndType, IND_JOBS, IND_TYPES } from './models_ind.js';
@@ -490,6 +490,34 @@ function junctionRule(p, dir) {
   return null;
 }
 
+// ---------- glorietas ----------
+export const ROUND_COST = 30000;
+// nodo de la red más cercano a una casilla (cruce de 3 o más vías), o null
+export function junctionNear(tx, ty) {
+  let best = null, bd = 3.1;
+  for (const n of G.net.nodes.values()) {
+    if (n.segs.length < 3) continue;
+    const d = Math.hypot(n.x - tx, n.y - ty);
+    if (d < bd) { bd = d; best = n; }
+  }
+  return best;
+}
+export const isRound = (n) => !!n && G.net.rounds.has(n.x + ',' + n.y);
+
+// Pone o quita la glorieta del cruce más cercano a la casilla. Devuelve un texto de aviso o null si todo salió bien.
+export function toggleRound(tx, ty) {
+  const n = junctionNear(tx, ty);
+  if (!n) return 'Haz clic sobre un cruce de 3 o más vías';
+  const key = n.x + ',' + n.y;
+  if (G.net.rounds.has(key)) G.net.rounds.delete(key);
+  else {
+    if (!spend(ROUND_COST)) return 'Dinero insuficiente';
+    G.net.rounds.add(key);
+  }
+  applyNet();
+  return null;
+}
+
 // Diagonal a 45°: se construyen los tramos continuos de pasos cuyas casillas (centro y unión) caben.
 function buildDiag(plan, k) {
   const { line, dy, s0, s1 } = plan.diag;
@@ -786,6 +814,9 @@ export function update(dt) {
 export function renderStats() { return pools ? pools.stats() : { draws: 0, inst: 0 }; }
 
 // ---------- guardado ----------
+// Versión del formato de guardado. 3: grafo vial · 4: glorietas y versión explícita.
+export const SAVE_VERSION = 4;
+
 export function serialize() {
   const zones = [];
   for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
@@ -793,7 +824,7 @@ export function serialize() {
     if (!t.road && t.zone) zones.push([x, y, t.zone]);
   }
   return {
-    v: 3, terrain: S.terrain, seed: G.seed, money: G.money, month: G.month, ticks: G.ticks, net: serializeNet(G.net), zones,
+    v: SAVE_VERSION, rounds: [...(G.net.rounds || [])], terrain: S.terrain, seed: G.seed, money: G.money, month: G.month, ticks: G.ticks, net: serializeNet(G.net), zones,
     blds: G.buildings.map((b) => ({ kind: b.kind, d: b.d, e: b.e, type: b.type, v: b.v, x: b.x, y: b.y, w: b.w, h: b.h, rot: b.rot, da: b.da, px: b.px, py: b.py, key: b.key })),
   };
 }
@@ -815,19 +846,30 @@ export function clearAll() {
   markDirty('all');
 }
 
+// Carga una partida; devuelve { skipped } con los edificios que ya no existen. Lanza Error si la partida es de
+// una versión más nueva que este juego.
 export function load(d) {
+  if ((d.v || 2) > SAVE_VERSION) throw new Error('La partida es de una versión más nueva del juego');
   clearAll();
   G.money = d.money; G.month = d.month; G.ticks = d.ticks || 0;
   // v3 guarda el grafo; las partidas v2 guardaban casillas sueltas y se convierten
   G.net = d.net ? loadNet(d.net) : netFromTiles(d.roads || []);
   rasterize(G.net, G.grid, N);
   applyCornerLevels(crossLevels(G.net, N, hC0));
-  for (const [x, y, z] of d.zones) G.grid[y][x].zone = z;
-  for (const b of d.blds) addBuilding(b);
+  G.net.rounds = new Set(d.rounds || []);
+  rasterize(G.net, G.grid, N);
+  for (const [x, y, z] of d.zones) if (inb(x, y) && !G.grid[y][x].road) G.grid[y][x].zone = z;
+  let skipped = 0;
+  for (const b of d.blds) {
+    // edificios de una versión anterior pueden usar modelos que ya no existen: se omiten (la zona vuelve a crecer)
+    if (!inb(b.x, b.y) || (b.kind !== 'pub' && !hasModel(b.kind, b.type)) || (b.kind === 'pub' && !PUBLIC[b.key])) { skipped++; continue; }
+    addBuilding(b);
+  }
   for (const b of G.buildings) b.grow = 0.999;
   markDirty('all');
   flush();
   quickStats();
+  return { skipped };
 }
 
 // población y empleo sin avanzar la simulación (para que el panel no quede en cero tras cargar en pausa)

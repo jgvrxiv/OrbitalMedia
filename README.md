@@ -32,6 +32,12 @@ Luego visita http://localhost:8000. El botón **🏙️ Ejemplo** genera una ciu
   pueden trazarse en **diagonal a 45°** (arrastrando cerca de esa inclinación) y los edificios de frente
   a una diagonal se giran para mirarla
   (sin acceso a lotes). Cualquier calle pavimentada admite alta densidad; el camino destapado sólo casas. La vía define cuánta pendiente admite.
+- **Vivienda continua en estratos 1-3**: la casilla de 12 m se divide en 2-4 frentes angostos (3-6 m) que
+  comparten medianeras, con distintas alturas y colores, antejardín según estrato y patio trasero; las
+  manzanas populares forman un frente continuo de calle, sin "islas" (la separación lateral es de estratos
+  altos). Cada modelo tiene 4 variantes de tamaño (número de frentes, profundidad y pisos).
+- **Glorietas**: herramienta *Vías → Intersecciones → Glorieta*; clic sobre un cruce de 3 o más vías la
+  crea y otro clic la quita.
 - **Industria**: talleres, cultivos de flores, ladrilleras, bodegas, fábricas textiles, agroindustria,
   plantas y centros logísticos. Produce bienes para el comercio (si faltan se importan, si sobran se
   exportan), da empleo y contamina (baja el valor del suelo alrededor).
@@ -65,10 +71,12 @@ Enter = terminar línea.
 | `js/roads.js` | Tipos de vía y malla de vías sobre el relieve. |
 | `js/roadnet.js` | Red vial como grafo (segmentos ortogonales y diagonales, nodos) proyectada sobre la cuadrícula. |
 | `js/netpath.js` | Rutas de bus y caminatas de carros sobre el grafo. |
-| `js/parcels.js` | Lotes generados a partir de las vías diagonales (fase 3). |
+| `js/parcels.js` | Lotes generados a partir de los segmentos de vía, rectos y diagonales (fase 3). |
+| `js/models_row.js` | Vivienda continua de estratos 1-3 (casas y edificios con locales en frente continuo). |
 | `js/scene.js` | Escena, relieve, cielo día/noche, cámara y selección. |
 | `js/game.js` | Estado, construcción y simulación (valor del suelo, demanda, economía). |
 | `js/transit.js` | Paradas, líneas, vehículos y tráfico ambiente. |
 | `js/ui.js`, `js/main.js`, `js/demo.js` | Interfaz, arranque y ciudad de ejemplo. |
-| `dev/gallery.html` | Galería de desarrollo de modelos (`?set=res1|res2|res3|com|ind|pub`, `&night=1`). |
+| `dev/gallery.html` | Galería de desarrollo de modelos (`?set=res1|res2|res3|com|ind|pub|ref|row`, `&night=1`). |
+| `dev/regression.js` | Regresión automática: `node dev/regression.js` genera la ciudad de ejemplo, cruces en llano y ladera, diagonales, glorietas, obras, guardado/carga y galerías; verifica y deja capturas en `dev/out/`. |
 | `docs/ANALISIS_CUADRICULA_Y_RELIEVE.md` | Análisis de salir de la cuadrícula y del relieve. |

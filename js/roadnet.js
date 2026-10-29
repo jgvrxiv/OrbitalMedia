@@ -16,7 +16,7 @@ export const DIAG = 3;
 export const diagLines = (w) => Math.ceil(w * Math.SQRT2 - 1e-6);
 const diagM = (seg) => diagLines(ROADS[seg.k].w) - 1;
 export function createNet() {
-  return { segs: [], nodes: new Map(), nextId: 1 };
+  return { segs: [], nodes: new Map(), nextId: 1, rounds: new Set() }; // rounds: nodos convertidos en glorieta
 }
 
 export function lanesOf(k) {
@@ -190,6 +190,8 @@ export function normalize(net) {
   }
   net.nodes = nodes;
   net.byId = new Map(out.map((s) => [s.id, s]));
+  // una glorieta sólo existe mientras su nodo siga siendo un cruce de 3 o más vías
+  if (net.rounds) for (const k of [...net.rounds]) if (!nodes.has(k) || nodes.get(k).segs.length < 3) net.rounds.delete(k);
 }
 
 // Proyecta el grafo sobre la cuadrícula: escribe tile.road = { k, ax, c, seg, li, nl } en cada casilla

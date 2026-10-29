@@ -30,6 +30,11 @@ export function buildModel(spec) {
   return g;
 }
 
+export function hasModel(kind, type) {
+  const T = kind === 'res' ? RES_TYPES : kind === 'com' ? COM_TYPES : kind === 'off' ? OFF_TYPES : IND_TYPES;
+  return !!T[type];
+}
+
 export function typeName(kind, type) {
   const T = kind === 'res' ? RES_TYPES : kind === 'com' ? COM_TYPES : kind === 'off' ? OFF_TYPES : IND_TYPES;
   return T[type]?.name || type;
@@ -59,6 +64,7 @@ export const MODEL_SETS = {
     { kind: 'off', type: 'casaOficinas', e: 4, v: 0, label: 'casaOficinas' }, { kind: 'off', type: 'centroEmpresarial', e: 5, v: 0, label: 'centroEmpresarial' },
     { kind: 'ind', type: 'bodegasBoveda', e: 3, v: 0, label: 'bodegasBoveda' },
   ],
+  row: () => ['hileraPopular', 'hileraAlta'].flatMap((t) => [1, 2, 3].flatMap((e) => [0, 1, 2, 3].map((v) => ({ kind: 'res', type: t, e, v, label: `${t} E${e} v${v}` })))),
   pub: () => Object.keys(PUBLIC).map((t) => ({ kind: 'pub', type: t, w: PUBLIC[t].w, label: PUBLIC[t].name })),
   ind: () => Object.keys(IND_TYPES).flatMap((t) => [0, 1].map((v) => ({ kind: 'ind', type: t, e: 3, v, label: `${t} v${v}` }))),
 };

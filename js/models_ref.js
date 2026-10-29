@@ -72,7 +72,7 @@ function visPareadas(B, e) {
   B.plane(0, 0.014, 0.3, 0.99, 0.36, '#a8a497');
   const brick = r.pick(BRICK);
   for (const s of [-1, 1]) {
-    const x = s * 0.24, w = 0.48, d = 0.56, z = -0.12;
+    const x = s * 0.2475, w = 0.495, d = 0.56, z = -0.12;
     B.box(x, 0, z, w, 2 * F, d, '#f3f1ec', {
       fl: 2, cw: 0.16,
       pick: (f, c, Fn, C, side) => {

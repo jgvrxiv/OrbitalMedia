@@ -124,6 +124,19 @@ cada brazo diagonal lleva su cebra. Propuestas siguientes para los empalmes comp
 5. **Semáforos y prioridades**: marcar visualmente las vías de mayor rango como preferenciales (sin cebra
    sobre ellas, con línea de pare en las secundarias).
 
+### Glorietas
+
+Un nodo de 3 o más vías puede convertirse en glorieta (`net.rounds`, se guarda). El cruce se dibuja como un
+anillo de calzada con isla central arborizada; cada brazo se corta donde su andén toca el círculo y lleva
+cebra. El radio crece con el ancho de las vías que llegan. Todo se asienta sobre el mismo plano ajustado al
+terreno que usan los demás cruces.
+
+### Guardado
+
+El formato lleva número de versión (`SAVE_VERSION`, hoy 4). Las partidas v2 (casillas) se convierten al
+grafo; una partida de versión futura se rechaza con aviso, y los edificios cuyo modelo ya no existe se omiten
+(la zona vuelve a crecer).
+
 Siguiente paso de la fase 3: segmentos curvos con el mismo generador de lotes.
 
 ## 3. Relieve: qué se implementó
