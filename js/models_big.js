@@ -210,7 +210,7 @@ export const BIG_IND = {
 // probabilidad de intentar un lote grande y tipo a elegir: BIG[tipo de zona][densidad][estrato] = [prob, [[tipo, peso]]]
 export const BIG_TABLE = {
   r: {
-    1: { 4: [0.3, [['haciendaGrande', 1]]], 5: [0.45, [['haciendaGrande', 0.4], ['mansionGrande', 0.6]]], 6: [0.6, [['mansionGrande', 1]]] },
+    1: { 6: [0.6, [['mansionGrande', 0.6], ['haciendaGrande', 0.4]]] }, // las mansiones son exclusivas del estrato 6
     2: { 2: [0.3, [['conjuntoCerrado', 1]]], 3: [0.35, [['conjuntoCerrado', 1]]], 4: [0.4, [['conjuntoCerrado', 1]]], 5: [0.45, [['conjuntoCerrado', 1]]], 6: [0.5, [['conjuntoCerrado', 1]]] },
     3: { 5: [0.35, [['torresPodio', 1]]], 6: [0.5, [['torresPodio', 1]]] },
   },

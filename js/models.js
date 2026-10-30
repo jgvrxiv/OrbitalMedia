@@ -76,8 +76,8 @@ export const MODEL_SETS = {
   ],
   row: () => ['hileraPopular', 'hileraAlta'].flatMap((t) => [1, 2, 3].flatMap((e) => [0, 1, 2, 3].map((v) => ({ kind: 'res', type: t, e, v, label: `${t} E${e} v${v}` })))),
   big: () => [
-    ...[2, 3].flatMap((e) => [0, 1, 2, 3].map((v) => ({ kind: 'res', type: 'casaFondo', e, v, w: 1.5, label: `casaFondo E${e} v${v}` }))),
-    ...Object.keys(BIG_RES).flatMap((t) => [4, 6].flatMap((e) => [0, 1].map((v) => ({ kind: 'res', type: t, e, v, w: 2, label: `${t} E${e} v${v}` })))),
+    ...[['casaFondo', 2], ['casaFondo', 3], ['casa4', 4], ['casa5', 5]].flatMap(([t, e]) => [0, 1, 2, 3].map((v) => ({ kind: 'res', type: t, e, v, w: 1.5, label: `${t} E${e} v${v}` }))),
+    ...Object.keys(BIG_RES).flatMap((t) => [6].flatMap((e) => [0, 1].map((v) => ({ kind: 'res', type: t, e, v, w: 2, label: `${t} E${e} v${v}` })))),
     ...[0, 1].map((v) => ({ kind: 'com', type: 'centroComercialGrande', e: 4, v, w: 2, label: `centroComercialGrande v${v}` })),
     ...[0, 1].map((v) => ({ kind: 'ind', type: 'fabricaGrande', e: 3, v, w: 2, label: `fabricaGrande v${v}` })),
   ],
