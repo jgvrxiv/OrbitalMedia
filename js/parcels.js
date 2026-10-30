@@ -23,23 +23,40 @@ export function buildParcels(net, grid, N) {
     if (seg.ax === DIAG) diagCandidates(seg, R, N, region, cand, blocked);
     else orthoCandidates(seg, R, N, grid, cand);
   }
-  // la geometría manda: primero se colocan los lotes girados; un lote recto no puede cruzar una vía diagonal
-  // ni un lote girado ya colocado, aunque la casilla esté libre
+  // cada lote es un cuadrado de 12 m (girado si es de diagonal); dos lotes no pueden superponerse aunque sean de
+  // vías distintas, ni cubrir el cuerpo de una diagonal ni una vía recta
+  cand.sort((a, b) => a.depth - b.depth || b.rank - a.rank || (a.diag ? 1 : 0) - (b.diag ? 1 : 0));
   const out = new Map();
-  const diagLots = [];
+  const placed = new Map(); // casilla redondeada -> lotes cuyo centro cae en ella
+  const H = 0.46;
+  const rd = (c) => [Math.round(c.px), Math.round(c.py)];
+  const overlap = (a, b) => {
+    const dx = b.px - a.px, dy = b.py - a.py;
+    const aa = a.ang ?? 0, ab = b.ang ?? 0, dl = ab - aa;
+    const r = H * (Math.abs(Math.cos(dl)) + Math.abs(Math.sin(dl)));
+    const ca = Math.cos(aa), sa = Math.sin(aa), cb = Math.cos(ab), sb = Math.sin(ab);
+    return Math.abs(dx * ca + dy * sa) < H + r && Math.abs(-dx * sa + dy * ca) < H + r
+      && Math.abs(dx * cb + dy * sb) < H + r && Math.abs(-dx * sb + dy * cb) < H + r;
+  };
+  const orthRoad = (x, y) => { const t = x >= 0 && y >= 0 && x < N && y < N && grid[y][x]; return !!t && !!t.road && t.road.ax !== DIAG; };
   const clashes = (c) => {
-    if (blocked[c.i]) return true;
-    for (const q of diagLots) {
-      const dx = Math.abs(q.px - c.px), dy = Math.abs(q.py - c.py);
-      if (dx < 1.05 && dy < 1.05 && dx + dy < 1.5) return true;
+    if (blocked[c.i] && !c.diag) return true;
+    if (c.diag) {
+      const a = c.ang;
+      for (const [ox, oy] of [[1, 1], [1, -1], [-1, 1], [-1, -1]]) {
+        const u = H * (ox * Math.cos(a) + oy * Math.sin(a)), v = H * (-ox * Math.sin(a) + oy * Math.cos(a));
+        if (orthRoad(Math.round(c.px + u), Math.round(c.py + v))) return true;
+      }
+    }
+    const [rx, ry] = rd(c);
+    for (let y = ry - 2; y <= ry + 2; y++) for (let x = rx - 2; x <= rx + 2; x++) {
+      for (const q of placed.get(y * N + x) || []) if (overlap(c, q)) return true;
     }
     return false;
   };
-  cand.sort((a, b) => (b.diag ? 1 : 0) - (a.diag ? 1 : 0) || a.depth - b.depth || b.rank - a.rank);
   const free = (i) => i >= 0 && i < N * N && !out.has(i) && !grid[(i / N) | 0][i % N].road;
   for (const c of cand) {
     let i = c.i;
-    if (!c.diag && clashes(c)) continue;
     if (!free(i)) {
       if (!c.diag) continue;
       // lote girado: si su casilla ya tiene lote, usa la casilla libre de la franja más cercana a su centro
@@ -54,8 +71,11 @@ export function buildParcels(net, grid, N) {
       if (best < 0) continue;
       i = best;
     }
+    if (clashes(c)) continue;
     out.set(i, { ...c, i });
-    if (c.diag) diagLots.push(c);
+    const [qx, qy] = rd(c), key = qy * N + qx;
+    if (!placed.has(key)) placed.set(key, []);
+    placed.get(key).push(c);
   }
   return { parcels: out, region };
 }

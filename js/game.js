@@ -66,6 +66,7 @@ export const G = {
   poll: new Float32Array(N * N),
   access: new Uint8Array(N * N), // densidad máxima permitida por la vía de frente (0 = sin acceso)
   face: new Int8Array(N * N), // dirección hacia la vía
+  depth: new Uint8Array(N * N), // fila del lote respecto a la vía (1 = con frente a la vía)
   dem: { r: 0.4, c: 0, i: 0, o: 0 },
   stats: emptyStats(),
   hooks: {
@@ -243,6 +244,7 @@ function detach(b) {
 function recomputeAccess() {
   G.access.fill(0);
   G.face.fill(-1);
+  G.depth.fill(0);
   // todos los lotes salen de los segmentos de vía (rectos o diagonales) con una sola prioridad
   const pr = buildParcels(G.net, G.grid, N);
   G.parcels = new Map();
@@ -250,6 +252,7 @@ function recomputeAccess() {
   for (const [i, p] of pr.parcels) {
     G.access[i] = p.dens;
     G.face[i] = p.face;
+    G.depth[i] = p.depth;
     if (p.diag) G.parcels.set(i, p);
   }
   // cuadrícula visible: sólo lotes con frente a una vía; en la franja de una diagonal, sus lotes girados
@@ -756,6 +759,8 @@ function tryBig(t, k, e) {
 function spawn(t) {
   const Z = ZONES[t.zone];
   const i = idx(t.x, t.y);
+  // las casas salen sobre la calle; las filas de atrás sólo se usan dentro de lotes grandes
+  if (G.depth[i] > 1) return;
   const pc = G.parcels?.get(i);
   const base = { x: t.x, y: t.y, d: Z.d, rot: G.face[i] >= 0 ? G.face[i] : 2, da: pc ? pc.ang : null, px: pc ? pc.px : null, py: pc ? pc.py : null };
   if (Z.k === 'r') {
@@ -804,7 +809,7 @@ function simulate() {
   const cands = [];
   for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
     const t = G.grid[y][x];
-    if (t.zone && !t.bld && !t.road && !t.stop && !zoneProblem(x, y, true)) cands.push(t);
+    if (t.zone && !t.bld && !t.road && !t.stop && G.depth[y * N + x] <= 1 && !zoneProblem(x, y, true)) cands.push(t);
   }
   for (let i = cands.length - 1; i > 0; i--) { const j = Math.floor(rand() * (i + 1)); [cands[i], cands[j]] = [cands[j], cands[i]]; }
   let spawned = 0;
