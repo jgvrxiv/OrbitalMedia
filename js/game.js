@@ -834,7 +834,9 @@ function tryIcon(t, e) {
 
 // coloca los rascacielos emblemáticos que falten en las zonas de oficinas de alta densidad (ciudad de ejemplo)
 export function ensureIcons() {
-  for (const type of Object.keys(OFF_TYPES).filter((k) => OFF_TYPES[k].icon && !G.buildings.some((b) => b.type === k))) {
+  const area = (k) => lotOf('off', k).reduce((a, v) => a * v, 1);
+  // los lotes más grandes primero, para que los pequeños no les quiten el sitio
+  for (const type of Object.keys(OFF_TYPES).filter((k) => OFF_TYPES[k].icon && !G.buildings.some((b) => b.type === k)).sort((a, b) => area(b) - area(a))) {
     const [W, D] = lotOf('off', type);
     let done = false;
     for (let y = 0; y < N && !done; y++) for (let x = 0; x < N && !done; x++) {

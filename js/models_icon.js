@@ -144,5 +144,5 @@ function bdBacata(B) {
 export const ICON_TYPES = {
   coltejer: { name: 'Edificio Coltejer', fn: coltejer, jobs: 3, native: [3, 3], icon: true },
   torreNaranja: { name: 'Torre de vidrio con exoesqueleto naranja', fn: torreNaranja, jobs: 3.2, native: [2, 2], icon: true },
-  bdBacata: { name: 'Complejo BD Bacatá', fn: bdBacata, jobs: 4.5, native: [4, 3], icon: true },
+  bdBacata: { name: 'Complejo BD Bacatá', fn: bdBacata, jobs: 4.5, native: [4, 3], lot: [6, 4], icon: true },
 };

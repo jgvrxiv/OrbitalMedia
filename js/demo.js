@@ -46,11 +46,11 @@ export function buildDemo() {
 
   // servicios: más al oriente (zona rica) y algunos en el centro
   const pubs = [
-    ['plaza', 36, 32], ['escuela', 42, 26], ['clinica', 42, 34], ['cai', 37, 35], ['parque', 48, 26],
-    ['biblioteca', 48, 34], ['mercado', 30, 33], ['bomberos', 30, 19], ['universidad', 49, 19], ['hospital', 49, 40],
-    ['parque', 54, 33], ['cai', 54, 26], ['escuela', 54, 40], ['cancha', 42, 42], ['estadio', 43, 49],
+    ['plaza', 28, 44], ['escuela', 42, 26], ['clinica', 47, 51], ['cai', 28, 37], ['parque', 48, 26],
+    ['biblioteca', 48, 42], ['mercado', 30, 33], ['bomberos', 30, 19], ['universidad', 49, 19], ['hospital', 49, 40],
+    ['parque', 54, 43], ['cai', 54, 26], ['escuela', 54, 40], ['cancha', 42, 42], ['estadio', 43, 49],
     ['cai', 30, 40], ['clinica', 30, 49], ['escuela', 22, 40], ['cancha', 22, 26], ['biblioteca', 7, 30], ['parque', 37, 20],
-    ['mercado', 51, 30], ['bomberos', 52, 21], ['plaza', 52, 36], ['cai', 48, 44], ['parque', 57, 44], ['biblioteca', 57, 25],
+    ['mercado', 51, 30], ['bomberos', 52, 21], ['plaza', 52, 45], ['cai', 48, 44], ['parque', 57, 44], ['biblioteca', 57, 25],
   ];
   pubs.forEach(([k, x, y]) => place(k, x, y));
 
@@ -72,6 +72,11 @@ export function buildDemo() {
   }
   // centro de oficinas junto a la troncal: lotes amplios donde caben los rascacielos emblemáticos
   for (const [y0, y1] of [[32, 38], [40, 45]]) for (let y = y0; y <= y1; y++) for (let x = 37; x <= 43; x++) {
+    const t = tile(x + O, y + O);
+    if (!t.road && !t.bld && !t.stop) t.zone = 12;
+  }
+  // oriente: manzana de oficinas amplia (6 × 4 casillas libres) para el complejo BD Bacatá
+  for (let y = 32; y <= 37; y++) for (let x = 47; x <= 59; x++) {
     const t = tile(x + O, y + O);
     if (!t.road && !t.bld && !t.stop) t.zone = 12;
   }
