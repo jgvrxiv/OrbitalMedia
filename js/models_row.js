@@ -32,10 +32,11 @@ function reja(B, x0, x1, z, gateX, color = '#2a2a2a') {
 function row(B, e, spec, high) {
   const r = B.r;
   const v = (spec && spec.v) || 0;
-  // cuántos frentes caben en 12 m según el estrato: 1 → 3 o 4 pequeños (muy distintos), 2 → hasta 3, 3 → máximo 2 (parejos)
+  // cuántos frentes caben en 12 m según el estrato: 1 → 2 (a veces 3), 2 y 3 → 2 (parejos)
+  // frentes reales de 5-7 m: en 12 m caben 2 (3 en los sectores más precarios)
   const N_UNITS = high
-    ? { 1: [3, 4, 3, 4], 2: [2, 3, 2, 2], 3: [2, 2, 2, 2] }
-    : { 1: [3, 4, 3, 4], 2: [3, 2, 3, 2], 3: [2, 2, 2, 2] };
+    ? { 1: [2, 3, 2, 2], 2: [2, 2, 2, 2], 3: [2, 2, 2, 2] }
+    : { 1: [2, 2, 3, 2], 2: [2, 2, 2, 2], 3: [2, 2, 2, 2] };
   const n = N_UNITS[Math.min(3, e)][v % 4];
   const D = high ? [0.72, 0.8, 0.62, 0.88][v % 4] : [0.62, 0.74, 0.54, 0.82][v % 4];
   const FL = high ? 0.24 : F;

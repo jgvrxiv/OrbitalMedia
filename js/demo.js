@@ -30,13 +30,15 @@ export function buildDemo() {
   // fondo del valle
   R('troncal', 34, 3, 34, 60);
   R('autopista', 24, 1, 24, 62);
-  R('avenida', 8, 30, 58, 30);
-  R('avenida', 12, 46, 54, 46);
-  R('avenida', 14, 16, 54, 16);
-  // calles
+  R('avenida', 8, 30, 62, 30);
+  R('avenida', 12, 46, 44, 46);
+  R('avenida', 14, 16, 44, 16);
+  R('avenida', 44, 48, 62, 48); // oriente: manzanas largas de 180-220 m con calles cada ~9 casillas
+  // calles: occidente con manzanas de 80-130 m, oriente (clase alta) de 190 × 100 m
   // manzanas de al menos 4 × 7 casillas libres (48 × 84 m) entre vías
-  for (const x of [44, 52, 60]) R('calle', x, 5, x, 58);
-  for (const y of [9, 24, 39, 55]) R('calle', 18, y, 58, y);
+  for (const x of [44, 61]) R('calle', x, 5, x, 58);
+  for (const y of [9, 24, 39, 55]) R('calle', 18, y, 44, y);
+  for (const y of [12, 21, 39, 55]) R('calle', 44, y, 61, y);
   // laderas occidentales: caminos destapados
   for (const x of [3, 11]) R('tierra', x, 12, x, 54);
   for (const y of [24, 38, 52]) R('tierra', 2, y, 19, y);
