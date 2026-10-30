@@ -11,7 +11,7 @@ import { InstPools } from './render.js';
 import { ROADS, buildRoadMesh } from './roads.js';
 import { buildParcels } from './parcels.js';
 import { DIAG, createNet, lanesOf, addSegment, removeCell, rasterize, netFromTiles, serializeNet, loadNet, crossLevels } from './roadnet.js';
-import { buildModel, VARIANTS, typeName, hasModel } from './models.js';
+import { buildModel, VARIANTS, typeName, hasModel, scaleOf } from './models.js';
 import { pickResType, resPop } from './models_res.js';
 import { pickComType, COM_JOBS, COM_TYPES, tierOf } from './models_com.js';
 import { pickIndType, IND_JOBS, IND_TYPES } from './models_ind.js';
@@ -170,7 +170,11 @@ function bldMatrix(b, sy = 1) {
   return _m.compose(_p, _q, _s);
 }
 
-export const modelKey = (b) => (b.kind === 'pub' ? 'pub:' + b.key : `${b.kind}:${b.type}:${b.kind === 'ind' ? 3 : b.e}:${b.v}`);
+export const modelKey = (b) => {
+  if (b.kind === 'pub') return 'pub:' + b.key;
+  const [sw, sd] = scaleOf(b);
+  return `${b.kind}:${b.type}:${b.kind === 'ind' ? 3 : b.e}:${b.v}` + (sw * sd > 1 ? `:${sw}x${sd}` : '');
+};
 
 // ---------- obra en construcción: andamio que sube con el edificio y grúa en los altos ----------
 const siteGeom = (() => {
@@ -217,7 +221,7 @@ const buildTime = (b) => 4 + b.mh * 2.2;
 function attach(b) {
   const pad = padOf(b.x, b.y, b.w, b.h);
   b.top = pad.top;
-  const geomFn = b.kind === 'pub' ? () => buildPublic(b.key) : () => buildModel({ kind: b.kind, type: b.type, e: b.kind === 'ind' ? 3 : b.e, v: b.v });
+  const geomFn = b.kind === 'pub' ? () => buildPublic(b.key) : () => { const [sw, sd] = scaleOf(b); return buildModel({ kind: b.kind, type: b.type, e: b.kind === 'ind' ? 3 : b.e, v: b.v, sw, sd }); };
   const geom = geomFn();
   b.mh = Math.max(0.15, geom.boundingBox ? geom.boundingBox.max.y : 0.5); // altura del modelo
   b.h_ = pools.add(modelKey(b), () => geom, bldMatrix(b, 0.001));
@@ -390,6 +394,8 @@ function recalc(b) {
   else if (b.kind === 'off') b.jobs = Math.round(OFF_JOBS[b.d] * (OFF_TYPES[b.type]?.jobs ?? 1));
   else if (b.kind === 'ind') b.jobs = Math.round(IND_JOBS[b.d] * (IND_TYPES[b.type]?.jobs ?? 1));
   else b.jobs = PUBLIC[b.key].jobs;
+  // un modelo estirado a un lote más grande aloja o emplea en proporción a su área
+  if (b.kind !== 'pub') { const [sw, sd] = scaleOf(b); b.pop = Math.round(b.pop * sw * sd); b.jobs = Math.round(b.jobs * sw * sd); }
 }
 
 export function addBuilding(o) {
@@ -730,69 +736,95 @@ export function bulldoze(tiles) {
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
 // Lote grande de 2×2: busca un bloque libre de la misma zona con la fila delantera frente a la misma vía.
+// tamaño del lote (ancho sobre la calle × fondo, en casillas) según el uso, la densidad y el estrato:
+// las casas de estrato 1 caben en 1×1; el resto de casas necesita al menos 2 de fondo; los edificios medios son de
+// 1×2 y los altos de 2×2
+function footprintFor(k, d, e) {
+  if (k === 'i') return [1, 1];
+  if (d >= 3) return [2, 2];
+  if (d === 2) return [1, 2];
+  return k === 'r' && e >= 2 ? [1, 2] : [1, 1];
+}
+
+// busca un lote libre de W (sobre la calle) × D (de fondo) con su frente en la casilla t; devuelve su esquina y tamaño
+function findLot(t, W, D) {
+  const Z = ZONES[t.zone];
+  const i0 = idx(t.x, t.y);
+  const f = G.face[i0];
+  if (f < 0 || G.parcels?.has(i0) || G.depth[i0] !== 1) return null;
+  const fw = DIRS[f], lat = DIRS[(f + 1) % 4];
+  for (const side of W > 1 ? [1, -1] : [1]) {
+    const cells = [];
+    let ok = true;
+    for (let a = 0; a < W && ok; a++) for (let b = 0; b < D && ok; b++) {
+      const x = t.x + lat[0] * side * a - fw[0] * b, y = t.y + lat[1] * side * a - fw[1] * b;
+      const c = tile(x, y), i = c && idx(x, y);
+      if (!c || c.road || c.stop || c.bld || c.zone !== t.zone || G.parcels?.has(i) || G.face[i] !== f || G.depth[i] !== b + 1) { ok = false; break; }
+      if (b === 0 && G.access[i] < Z.d) { ok = false; break; }
+      cells.push([x, y]);
+    }
+    if (!ok) continue;
+    const xs = cells.map((c) => c[0]), ys = cells.map((c) => c[1]);
+    const x = Math.min(...xs), y = Math.min(...ys);
+    return { x, y, w: Math.max(...xs) - x + 1, h: Math.max(...ys) - y + 1, rot: f };
+  }
+  return null;
+}
+
 function tryBig(t, k, e) {
   const Z = ZONES[t.zone];
   const type = pickBigType(k, Z.d, e, rand);
   if (!type) return false;
-  const i0 = idx(t.x, t.y);
-  if (G.parcels?.has(i0)) return false; // junto a diagonales los lotes ya son girados
-  const f = G.face[i0];
-  if (f < 0) return false;
-  const fw = DIRS[f], lat = DIRS[(f + 1) % 4];
-  for (const side of [1, -1]) {
-    const cells = [];
-    let ok = true;
-    for (let a = 0; a < 2 && ok; a++) for (let b = 0; b < 2 && ok; b++) {
-      const x = t.x + lat[0] * side * a - fw[0] * b, y = t.y + lat[1] * side * a - fw[1] * b;
-      const c = tile(x, y);
-      if (!c || c.road || c.stop || c.bld || c.zone !== t.zone || G.parcels?.has(idx(x, y))) { ok = false; break; }
-      if (b === 0 && (G.face[idx(x, y)] !== f || G.access[idx(x, y)] < Z.d)) { ok = false; break; }
-      cells.push([x, y]);
-    }
-    if (!ok) continue;
-    const ox = Math.min(...cells.map((c) => c[0])), oy = Math.min(...cells.map((c) => c[1]));
-    addBuilding({ kind: { r: 'res', c: 'com', i: 'ind' }[k], d: Z.d, e, type, x: ox, y: oy, w: 2, h: 2, rot: f });
-    return true;
-  }
-  return false;
+  const L = findLot(t, 2, 2);
+  if (!L) return false;
+  addBuilding({ kind: { r: 'res', c: 'com', i: 'ind' }[k], d: Z.d, e, type, ...L });
+  return true;
 }
 
 // casa de estrato 2-3 en lote de 1×2: el frente sobre la calle y el patio en la fila de atrás
 function tryDeep(t, e) {
   const type = pickDeepType(ZONES[t.zone].d, e, rand);
   if (!type) return false;
-  const i0 = idx(t.x, t.y);
-  const f = G.face[i0];
-  if (f < 0 || G.parcels?.has(i0) || G.depth[i0] !== 1) return false;
-  const fw = DIRS[f];
-  const bx = t.x - fw[0], by = t.y - fw[1], c = tile(bx, by);
-  if (!c || c.road || c.stop || c.bld || c.zone !== t.zone || G.parcels?.has(idx(bx, by))) return false;
-  if (G.face[idx(bx, by)] !== f || G.depth[idx(bx, by)] !== 2) return false;
-  addBuilding({ kind: 'res', d: ZONES[t.zone].d, e, type, x: Math.min(t.x, bx), y: Math.min(t.y, by), w: fw[0] ? 2 : 1, h: fw[0] ? 1 : 2, rot: f });
+  const L = findLot(t, 1, 2);
+  if (!L) return false;
+  addBuilding({ kind: 'res', d: ZONES[t.zone].d, e, type, ...L });
   return true;
 }
 
+// edificio común: su modelo se estira al lote que le corresponde; si el lote no cabe, no se construye
+function spawnSized(t, kind, e, type, base) {
+  const [W, D] = footprintFor({ res: 'r', com: 'c', off: 'o', ind: 'i' }[kind], ZONES[t.zone].d, e);
+  if (W * D === 1 || base.da !== null) { addBuilding({ ...base, kind, e, type }); return true; }
+  const L = findLot(t, W, D);
+  if (!L) return false;
+  addBuilding({ ...base, kind, e, type, ...L, da: null, px: null, py: null });
+  return true;
+}
+
+// devuelve true si construyó
 function spawn(t) {
   const Z = ZONES[t.zone];
   const i = idx(t.x, t.y);
-  // las casas salen sobre la calle; las filas de atrás sólo se usan dentro de lotes grandes
-  if (G.depth[i] > 1) return;
+  // las casas salen sobre la calle; las filas de atrás sólo se usan dentro de lotes más profundos
+  if (G.depth[i] > 1) return false;
   const pc = G.parcels?.get(i);
   const base = { x: t.x, y: t.y, d: Z.d, rot: G.face[i] >= 0 ? G.face[i] : 2, da: pc ? pc.ang : null, px: pc ? pc.px : null, py: pc ? pc.py : null };
   if (Z.k === 'r') {
     let e = estratoOf(G.lv[i]);
     if (e > 1 && rand() < 0.2) e--;
-    if (tryBig(t, 'r', e)) return;
-    if (tryDeep(t, e)) return;
-    addBuilding({ ...base, kind: 'res', e, type: pickResType(Z.d, e, rand) });
+    if (tryBig(t, 'r', e) || tryDeep(t, e)) return true;
+    return spawnSized(t, 'res', e, pickResType(Z.d, e, rand), base);
   } else if (Z.k === 'o') {
     const e = estratoOf(G.lv[i]);
-    addBuilding({ ...base, kind: 'off', e, type: pickOffType(Z.d, e, rand) });
+    return spawnSized(t, 'off', e, pickOffType(Z.d, e, rand), base);
   } else if (Z.k === 'c') {
     const e = estratoOf(G.lv[i]);
-    if (tryBig(t, 'c', e)) return;
-    addBuilding({ ...base, kind: 'com', e, type: pickComType(Z.d, e, rand) });
-  } else if (!tryBig(t, 'i', 3)) addBuilding({ ...base, kind: 'ind', e: 3, type: pickIndType(Z.d, rand) });
+    if (tryBig(t, 'c', e)) return true;
+    return spawnSized(t, 'com', e, pickComType(Z.d, e, rand), base);
+  }
+  if (tryBig(t, 'i', 3)) return true;
+  addBuilding({ ...base, kind: 'ind', e: 3, type: pickIndType(Z.d, rand) });
+  return true;
 }
 
 function simulate() {
@@ -835,7 +867,7 @@ function simulate() {
     if (spawned >= maxSpawn) break;
     const k = ZONES[t.zone].k;
     const p = G.dem[k] < -0.2 ? 0.005 : 0.05 + 0.45 * Math.max(0, G.dem[k]);
-    if (rand() < p) { spawn(t); spawned++; }
+    if (rand() < p && spawn(t)) spawned++;
   }
   if (spawned) { markDirty('zones'); G.dirty.pollLv = true; }
 

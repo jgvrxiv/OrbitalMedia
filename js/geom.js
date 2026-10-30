@@ -47,6 +47,8 @@ export class Builder {
     this.p = []; this.n = []; this.c = []; this.u = [];
     this.r = rng(seed);
     this.litP = 0.32; // probabilidad de ventana encendida de noche
+    this.sx = 1; this.sz = 1; // escala horizontal del modelo (lotes más grandes que 1×1)
+    this._depth = 0;
   }
 
   // triángulo con normal plana. cols: color único o array de 3 colores [r,g,b]
@@ -311,6 +313,31 @@ export class Builder {
     geom.computeBoundingSphere();
     geom.computeBoundingBox();
     return geom;
+  }
+}
+
+// Escala horizontal: un modelo pensado para 1×1 se "estira" a 1×2 o 2×2 casillas. Se escalan las posiciones y las
+// dimensiones horizontales de los volúmenes (> 0,2) y de los suelos planos; los detalles pequeños (tanques,
+// rejas, barandas) conservan su tamaño, y los muros más largos reciben más columnas de ventanas.
+{
+  const P = Builder.prototype;
+  // nombre: [índices de x, z, ancho, fondo] en la lista de argumentos
+  const SPEC = {
+    box: [0, 2, 3, 5], slab: [0, 2, 3, 5], gable: [0, 2, 3, 5], hip: [0, 2, 3, 5], rbox: [0, 2, 3, 5],
+    shed: [0, 2, 3, 4], plane: [0, 2, 3, 4], cyl: [0, 2], hcyl: [0, 2], cone: [0, 2], sphere: [0, 2], vault: [0, 2],
+    palm: [0, 1], tree: [0, 1], bush: [0, 1],
+  };
+  for (const [name, [ix, iz, iw, id]] of Object.entries(SPEC)) {
+    const orig = P[name];
+    P[name] = function (...a) {
+      if (this._depth || (this.sx === 1 && this.sz === 1)) { this._depth++; try { return orig.apply(this, a); } finally { this._depth--; } }
+      a[ix] *= this.sx; a[iz] *= this.sz;
+      const flat = name === 'plane' || (name === 'box' && a[4] < 0.03);
+      if (iw !== undefined && (flat || a[iw] > 0.2)) a[iw] *= this.sx;
+      if (id !== undefined && (flat || a[id] > 0.2)) a[id] *= this.sz;
+      this._depth++;
+      try { return orig.apply(this, a); } finally { this._depth--; }
+    };
   }
 }
 

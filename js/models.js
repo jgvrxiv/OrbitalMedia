@@ -10,7 +10,14 @@ import { BIG_RES, BIG_COM, BIG_IND } from './models_big.js';
 export const VARIANTS = 4; // variantes por combinación (paletas/disposición)
 const cache = new Map();
 
-export const keyOf = (s) => `${s.kind}:${s.type}:${s.e || 0}:${s.v || 0}`;
+export const keyOf = (s) => `${s.kind}:${s.type}:${s.e || 0}:${s.v || 0}` + ((s.sw || 1) * (s.sd || 1) > 1 ? `:${s.sw}x${s.sd}` : '');
+
+const tableOf = (kind) => (kind === 'res' ? RES_TYPES : kind === 'com' ? COM_TYPES : kind === 'off' ? OFF_TYPES : IND_TYPES);
+// ancho (sobre la calle) y fondo, en casillas, con que hay que estirar el modelo de un edificio; 1×1 si su modelo ya es del tamaño del lote
+export function scaleOf(b) {
+  if (b.kind === 'pub' || b.w * b.h <= 1 || tableOf(b.kind)[b.type]?.size) return [1, 1];
+  return b.rot % 2 ? [b.h, b.w] : [b.w, b.h];
+}
 
 function hash(str) {
   let h = 2166136261;
@@ -18,11 +25,13 @@ function hash(str) {
   return h >>> 0;
 }
 
+const T0 = (spec) => tableOf(spec.kind)[spec.type] || {};
 export function buildModel(spec) {
   const key = keyOf(spec);
   if (cache.has(key)) return cache.get(key);
   if (spec.kind === 'pub') { const g = buildPublic(spec.type); cache.set(key, g); return g; }
   const B = new Builder(hash(key));
+  if (!T0(spec).size) { B.sx = spec.sw || 1; B.sz = spec.sd || 1; }
   const T = spec.kind === 'res' ? RES_TYPES : spec.kind === 'com' ? COM_TYPES : spec.kind === 'off' ? OFF_TYPES : IND_TYPES;
   T[spec.type].fn(B, spec.e || 1, spec);
   const g = B.build();
