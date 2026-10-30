@@ -10,7 +10,7 @@ import { mats, rng, Builder } from './geom.js';
 import { InstPools } from './render.js';
 import { ROADS, buildRoadMesh } from './roads.js';
 import { buildParcels } from './parcels.js';
-import { createNet, lanesOf, addSegment, removeCell, rasterize, netFromTiles, serializeNet, loadNet, crossLevels } from './roadnet.js';
+import { DIAG, createNet, lanesOf, addSegment, removeCell, rasterize, netFromTiles, serializeNet, loadNet, crossLevels } from './roadnet.js';
 import { buildModel, VARIANTS, typeName, hasModel } from './models.js';
 import { pickResType, resPop } from './models_res.js';
 import { pickComType, COM_JOBS, COM_TYPES, tierOf } from './models_com.js';
@@ -163,7 +163,7 @@ function bldMatrix(b, sy = 1) {
   _q.setFromAxisAngle(_up, diag ? b.da : ROT[b.rot] ?? 0);
   if (own) _p.set(b.px - N / 2 + 0.5, b.top, b.py - N / 2 + 0.5);
   else _p.set(tw(b.x) + (b.w - 1) / 2, b.top, tw(b.y) + (b.h - 1) / 2);
-  const k = own ? 0.97 : diag ? DIAG_SCALE : 1;
+  const k = b.kind === 'pub' && diag ? 0.72 : own ? 0.97 : diag ? DIAG_SCALE : 1;
   _s.set(k, sy, k);
   return _m.compose(_p, _q, _s);
 }
@@ -201,7 +201,8 @@ function siteMatrix(b, sy, crane = false) {
   if (diag && b.px !== null && b.px !== undefined) _p.set(b.px - N / 2 + 0.5, b.top, b.py - N / 2 + 0.5);
   else _p.set(tw(b.x) + (b.w - 1) / 2, b.top, tw(b.y) + (b.h - 1) / 2);
   const h = crane ? b.mh * 1.25 + 0.4 : Math.max(0.05, sy);
-  _s.set(b.w, h, b.h);
+  const kk = b.kind === 'pub' && diag ? 0.72 : 1;
+  _s.set(b.w * kk, h, b.h * kk);
   return _m.compose(_p, _q, _s);
 }
 function endSite(b) {
@@ -641,6 +642,24 @@ export function paintZone(tiles, z) {
   return true;
 }
 
+// diagonal contigua más cercana a un edificio de w×h con centro (cx, cy): su ángulo de frente y la holgura
+// entre su fachada y el borde de la vía (en casillas); null si ninguna queda a menos de ~1 casilla
+function nearestDiag(cx, cy, w, h) {
+  let best = null;
+  for (const seg of G.net.segs) {
+    if (seg.ax !== DIAG) continue;
+    const ux = Math.SQRT1_2, uy = seg.dy * Math.SQRT1_2, nx = -seg.dy * Math.SQRT1_2, ny = Math.SQRT1_2;
+    const dx = cx - seg.s0, dy = cy - seg.dy * (seg.s0 - seg.line);
+    const t = dx * ux + dy * uy, d = dx * nx + dy * ny, L = (seg.s1 - seg.s0) * Math.SQRT2;
+    if (t < -0.5 || t > L + 0.5) continue;
+    const half = ROADS[seg.k].meters / 24;
+    const gap = Math.abs(d) - half - (w * Math.abs(nx) + h * Math.abs(ny)) / 2;
+    if (gap > 1.3 || gap < -0.05) continue;
+    if (!best || gap < best.gap) { const sd = d < 0 ? -1 : 1; best = { gap, ang: Math.atan2(-sd * nx, -sd * ny) }; }
+  }
+  return best;
+}
+
 export function canPlacePublic(key, x, y) {
   const d = PUBLIC[key];
   if (x < 0 || y < 0 || x + d.w > N || y + d.h > N) return { ok: false, tiles: [] };
@@ -654,13 +673,17 @@ export function canPlacePublic(key, x, y) {
   }
   // lado con más vía al frente
   const sides = [0, 0, 0, 0];
-  for (let i = 0; i < d.w; i++) { if (isRoad(x + i, y - 1)) sides[0]++; if (isRoad(x + i, y + d.h)) sides[2]++; }
-  for (let j = 0; j < d.h; j++) { if (isRoad(x - 1, y + j)) sides[3]++; if (isRoad(x + d.w, y + j)) sides[1]++; }
-  const best = sides.indexOf(Math.max(...sides));
-  const noRoad = sides[best] === 0;
+  const orth = (a, b) => { const r = roadAt(a, b); return !!r && r.ax !== DIAG; };
+  for (let i = 0; i < d.w; i++) { if (orth(x + i, y - 1)) sides[0]++; if (orth(x + i, y + d.h)) sides[2]++; }
+  for (let j = 0; j < d.h; j++) { if (orth(x - 1, y + j)) sides[3]++; if (orth(x + d.w, y + j)) sides[1]++; }
+  let best = sides.indexOf(Math.max(...sides));
+  // vía diagonal más cercana: el frente apunta a ella con su ángulo real (si está más cerca que la vía recta)
+  const diag = nearestDiag(x + (d.w - 1) / 2, y + (d.h - 1) / 2, d.w, d.h);
+  const useDiag = diag && (sides[best] === 0 || diag.gap < 0);
+  const noRoad = sides[best] === 0 && !diag;
   const steep = false; // los edificios se apoyan en plataformas: la pendiente sólo limita las vías
   if (noRoad || steep) { ok = false; tiles.forEach((t) => { t.ok = false; }); }
-  return { ok, tiles, noRoad, steep, rot: best };
+  return { ok, tiles, noRoad, steep, rot: best, ...(useDiag ? { da: diag.ang, px: x + (d.w - 1) / 2, py: y + (d.h - 1) / 2 } : {}) };
 }
 
 export function placePublic(key, x, y) {
@@ -676,7 +699,7 @@ export function placePublic(key, x, y) {
     if (t.bld) removeBuilding(t.bld);
     t.zone = 0;
   }
-  addBuilding({ kind: 'pub', key, x, y, w: d.w, h: d.h, rot: c.rot });
+  addBuilding({ kind: 'pub', key, x, y, w: d.w, h: d.h, rot: c.rot, da: c.da ?? null, px: c.px ?? null, py: c.py ?? null });
   markDirty('zones'); markDirty('cov');
   flush();
   G.onChange();

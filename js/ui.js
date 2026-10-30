@@ -241,7 +241,7 @@ function finishLine() {
 function removeGhost() {
   if (ghost) { S.root.remove(ghost); ghost = null; ghostKey = null; }
 }
-function showGhost(key, x, y, rot) {
+function showGhost(key, x, y, rot, da) {
   const d = PUBLIC[key];
   if (ghostKey !== key) {
     removeGhost();
@@ -251,7 +251,9 @@ function showGhost(key, x, y, rot) {
     ghostKey = key;
   }
   ghost.position.set(tw(x) + (d.w - 1) / 2, padOf(x, y, d.w, d.h).top + 0.01, tw(y) + (d.h - 1) / 2);
-  ghost.rotation.y = [Math.PI, Math.PI / 2, 0, -Math.PI / 2][rot] ?? 0;
+  const dg = da !== undefined && da !== null;
+  ghost.rotation.y = dg ? da : [Math.PI, Math.PI / 2, 0, -Math.PI / 2][rot] ?? 0;
+  ghost.scale.set(dg ? 0.72 : 1, 1, dg ? 0.72 : 1);
 }
 
 // ---------- vista previa por herramienta ----------
@@ -289,8 +291,8 @@ function updatePreview() {
   } else if (T0.type === 'pub') {
     const o = origin(h, T0.key);
     const c = canPlacePublic(T0.key, o.x, o.y);
-    setPreview(c.tiles.length ? c.tiles : [{ x: h.x, y: h.y, ok: false }]);
-    if (c.tiles.length) showGhost(T0.key, o.x, o.y, c.rot); else removeGhost();
+    setPreview(c.tiles.length ? c.tiles.map((q) => ({ ...q, raw: true })) : [{ x: h.x, y: h.y, ok: false }]);
+    if (c.tiles.length) showGhost(T0.key, o.x, o.y, c.rot, c.da); else removeGhost();
     info.textContent = `${PUBLIC[T0.key].name} · ${fmt(PUBLIC[T0.key].cost)}` + (c.noRoad ? ' · ¡necesita una vía al lado!' : c.steep ? ' · terreno muy inclinado' : '');
   } else if (T0.type === 'round') {
     const n = junctionNear(h.x, h.y);
