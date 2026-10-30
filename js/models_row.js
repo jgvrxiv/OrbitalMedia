@@ -5,7 +5,7 @@
 //   media densidad -> edificios de apartamentos de 3-5 pisos con locales abajo (hileraAlta)
 // La variante (spec.v, 0-3) cambia el número de frentes, la profundidad y la altura (tamaños distintos).
 import { CELL, shade } from './geom.js';
-import { PAL, awning, sign, balcony, tank, rebar, laundry, acUnit, antenna, dish, parapet } from './kit.js';
+import { PAL, awning, sign, balcony, tank, rebar, laundry, acUnit, antenna, dish, parapet, roofCover } from './kit.js';
 
 const F = 0.26;
 
@@ -97,15 +97,14 @@ function row(B, e, spec, high) {
     // medianera vista: si esta unidad es más baja que la vecina el muro de la vecina ya se ve; si es más alta se ve el suyo
     // techo
     const roof = e >= 3 ? sh.roof : r();
-    if (!high && e <= 1 && roof < 0.45) {
-      B.shed(cx, H, zc, w - 0.004, D, 0.0, 0.07, r.pick(PAL.zinc), 'z-');
-    } else if (!high && e >= 3 && roof < 0.45) {
-      B.gable(cx, H, zc, w + 0.0, 0.14, D + 0.06, r.pick(PAL.clay), 'x', { gable: base });
+    if (!high) {
+      roofCover(B, e, cx, H, zc, w - 0.004, D, { paint: base, ridge: 'z', raw });
     } else {
       B.box(cx, H, zc, w - 0.004, 0.025, D + 0.02, shade(base, 0.8));
       parapet(B, cx, H + 0.025, zc, w - 0.004, D, 0.045, shade(base, 0.92));
       if (raw || (e <= 2 && r() < 0.5)) rebar(B, cx, H + 0.025, zc - D * 0.2, w * 0.7, D * 0.4, 0.1);
-      if (r() < 0.8) tank(B, cx + w * 0.15, H + 0.025, zc - D * 0.15, { s: high ? 1.2 : 1 });
+      if (e <= 2 && r() < 0.5) B.shed(cx, H + 0.03, zc + D * 0.15, w * 0.6, D * 0.35, 0, 0.03, r.pick(PAL.sheet), 'z-', CELL.CORRUG);
+      if (r() < 0.8) tank(B, cx + w * 0.15, H + 0.025, zc - D * 0.15, { s: 1.2 });
       if (e <= 2 && r() < 0.35) laundry(B, cx, H + 0.14, zc, Math.min(w * 0.8, 0.3), 'x');
       if (r() < 0.2) antenna(B, cx - w * 0.2, H + 0.025, zc + D * 0.1, 0.15);
       else if (r() < 0.2) dish(B, cx - w * 0.2, H + 0.025, zc + D * 0.2);

@@ -8,8 +8,8 @@ export const F = m2u(FLOOR_M); // altura de piso residencial (3,1 m)
 export const PAL = {
   // muros pintados / acabados por estrato
   wall: {
-    1: ['#b8714f', '#a9a59c', '#c8b39a', '#7f98a8', '#c98f7a', '#8ea07a', '#d6c38d', '#a8604a'],
-    2: ['#f2c14e', '#7fc8a9', '#f28f8f', '#7cb6e0', '#f4a259', '#c8a2d8', '#e8d6a0', '#9fd18b', '#ff9e7a', '#5fbfbf'],
+    1: ['#b8714f', '#a9a59c', '#c8b39a', '#a8a39a', '#b5afa3', '#9a958c', '#c98f7a', '#a8604a', '#bdb4a4', '#8f9a8c'],
+    2: ['#e3d8c4', '#d6cdb9', '#cfc5b0', '#e9dfc9', '#d9c08a', '#a9c6b4', '#d8a597', '#9fbad0', '#d9b08a', '#c9bfa8', '#e0d2a8', '#b8c4a2'],
     3: ['#efe2c8', '#e3d0b0', '#d4e0d6', '#f0cfa5', '#c9d6e3', '#f0d9cf', '#e8e0a8', '#d8c3e0'],
     4: ['#f1ece2', '#dcd3c3', '#e9dccb', '#e2e7e8', '#d9cbb4', '#f3e7d3'],
     5: ['#f4f1ea', '#e7e2d8', '#d3cec3', '#ece6dc', '#f6f2e8'],
@@ -17,7 +17,10 @@ export const PAL = {
   },
   brick: ['#b4553a', '#a14a35', '#c0643f', '#9c4a34', '#b8714f'],
   zinc: ['#8f969c', '#a2622f', '#b5babe', '#7d848b', '#9b5a33'],
-  clay: ['#b5523b', '#a8442a', '#c0603f', '#9a4030'],
+  // láminas de techo de barrio: casi siempre gris, con retazos azules, naranjas y oxidados
+  sheet: ['#8f969c', '#9aa0a5', '#a7adb1', '#7c838a', '#8f969c', '#9aa0a5', '#a7adb1', '#7c838a', '#8f969c', '#3f6fb5', '#d2643a', '#b8462f', '#9b5a33'],
+  clay: ['#b5523b', '#a8442a', '#c0603f', '#9a4030', '#b9633f', '#a35540', '#8f5a48'],
+  slate: ['#4a4f55', '#5a5f66', '#3f444a'],
   dark: ['#2e3a46', '#3b3f45', '#2b2b30', '#45403a'],
   wood: ['#9a6b3f', '#8a5a32', '#b07d4a', '#7a5230'],
   stone: ['#b8b1a4', '#a9a294', '#c7bfb0', '#8e8a82'],
@@ -279,3 +282,71 @@ export const pickW = (arr) => {
     return arr[arr.length - 1][0];
   };
 };
+
+
+// Techo de una casa por estrato (y = parte alta de los muros, w×d = huella). Es lo más visible desde arriba:
+//  1: losa de concreto con retazos de lámina (gris, azul, naranja), tanques y varillas
+//  2: lámina corrugada a una agua o terraza con parapeto y lámina parcial
+//  3: teja de barro a dos aguas / cuatro aguas o terraza con parapeto
+//  4-5: teja de barro con paños cruzados, buhardillas y chimenea
+//  6: techos quebrados de teja o pizarra con claraboyas, chimeneas y partes planas modernas
+export function roofCover(B, e, cx, y, cz, w, d, o = {}) {
+  const r = B.r;
+  const paint = o.paint || '#e3d8c4';
+  const ridge = o.ridge || (w >= d ? 'x' : 'z');
+  const clay = r.pick(PAL.clay);
+  const sheetAt = (x, z, sw, sd, h = 0.03) => {
+    const c = r.pick(PAL.sheet);
+    B.shed(x, y + 0.03, z, sw, sd, 0.0, h, c, r.pick(['z-', 'z+', 'x-', 'x+']), CELL.CORRUG);
+  };
+  const flat = (col = '#a7a39b', pr = 0.05) => {
+    B.box(cx, y, cz, w + 0.02, 0.025, d + 0.02, col);
+    parapet(B, cx, y + 0.025, cz, w, d, pr, o.parapet || shade(paint, 0.9));
+  };
+  const tanks = (p = 0.7) => { if (r() < p) tank(B, cx + (r() < 0.5 ? -1 : 1) * w * 0.22, y + 0.025, cz + d * 0.12, { s: o.s || 1 }); };
+  if (e <= 1) {
+    flat('#9b978f', 0.025);
+    const n = r.int(2, 4), cols = Math.min(n, w > 0.5 ? 3 : 2);
+    for (let i = 0; i < n; i++) {
+      const sw = Math.max(0.1, (w * 0.8) / cols), sd = d * r.range(0.3, 0.5);
+      const px = cx - w * 0.4 + sw / 2 + (i % cols) * (sw + 0.01), pz = cz + (i < cols ? -1 : 1) * d * 0.22;
+      sheetAt(px, pz, sw - 0.01, sd);
+    }
+    if (o.raw !== false && r() < 0.6) rebar(B, cx, y + 0.025, cz - d * 0.3, w * 0.7, d * 0.3, 0.1);
+    tanks(0.75);
+    if (r() < 0.35) B.box(cx + w * 0.25, y + 0.025, cz + d * 0.3, 0.07, 0.04, 0.05, '#3a3a3a');
+  } else if (e === 2) {
+    const k = r();
+    if (k < 0.45) {
+      B.shed(cx, y, cz, w + 0.03, d + 0.03, 0.0, 0.09, r.pick(PAL.sheet), r.pick(['z-', 'z+']), CELL.CORRUG);
+      tanks(0.4);
+    } else if (k < 0.75) {
+      flat();
+      if (r() < 0.7) sheetAt(cx, cz - d * 0.2, w * 0.7, d * 0.4, 0.04);
+      tanks(0.8);
+    } else {
+      B.gable(cx, y, cz, ridge === 'x' ? w + 0.05 : w + 0.03, 0.13, ridge === 'x' ? d + 0.05 : d + 0.03, r() < 0.5 ? clay : r.pick(PAL.sheet), ridge, { gable: paint, cell: CELL.ROOFTILE });
+    }
+  } else if (e === 3) {
+    const k = r();
+    if (k < 0.55) {
+      B.gable(cx, y, cz, w + 0.06, 0.15, d + 0.06, clay, ridge, { gable: paint });
+      if (r() < 0.3) chimney(B, cx + w * 0.25, cz, y + 0.14, 0.04, false);
+    } else if (k < 0.75) B.hip(cx, y, cz, w + 0.06, 0.14, d + 0.06, clay);
+    else { flat(); tanks(0.7); if (r() < 0.4) pergola(B, cx, y + 0.025, cz + d * 0.15, w * 0.5, d * 0.3); }
+  } else if (e <= 5) {
+    B.gable(cx, y, cz, w + 0.08, 0.17, d + 0.08, clay, ridge, { gable: paint });
+    if (w > 0.4 && d > 0.4) {
+      // paño cruzado hacia el frente y buhardilla
+      const cw = w * 0.38;
+      B.gable(cx + w * (r() < 0.5 ? -0.2 : 0.2), y, cz + d * 0.18, ridge === 'x' ? cw : d * 0.5, 0.12, ridge === 'x' ? d * 0.5 : cw, clay, ridge === 'x' ? 'z' : 'x', { gable: paint });
+    }
+    if (r() < 0.5) chimney(B, cx - w * 0.28, cz - d * 0.1, y + 0.16, 0.04, false);
+  } else {
+    const col = r() < 0.45 ? r.pick(PAL.slate) : clay;
+    B.hip(cx, y, cz, w + 0.1, 0.2, d + 0.1, col);
+    if (w > 0.5) B.gable(cx + w * 0.22, y, cz + d * 0.22, w * 0.32, 0.12, d * 0.4, col, 'z', { gable: paint });
+    B.box(cx - w * 0.2, y + 0.16, cz, 0.12, 0.012, 0.09, '#a9d3e6'); // claraboya
+    if (r() < 0.6) chimney(B, cx - w * 0.3, cz - d * 0.15, y + 0.2, 0.045, false);
+  }
+}

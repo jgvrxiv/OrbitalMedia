@@ -78,6 +78,8 @@ export class Builder {
   // quad texturizado con una celda del atlas (a=abajo-izq, b=abajo-der, c=arriba-der, d=arriba-izq)
   cellQuad(a, b, c, d, color, cell, cols, lit) {
     let id = cell;
+    // cada paño de techo (teja o lámina) envejece distinto
+    if (cell === CELL.ROOFTILE || cell === CELL.CORRUG) color = shade(color, 0.86 + this.r() * 0.2);
     if (lit === undefined) lit = hasLit(cell) && this.r() < this.litP;
     if (lit && hasLit(cell)) id += LIT;
     const [u0, v0, u1, v1] = cellUV(id);

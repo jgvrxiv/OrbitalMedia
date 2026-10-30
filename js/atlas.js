@@ -231,23 +231,35 @@ const DRAW = {
     pane(g, em, lit, 4, 22, 120, 40, { noFrame: true, glass: ['#a5c0d4', '#4a6579'] });
     if (!em) { g.fillStyle = '#d8d8d8'; for (let x = 34; x < 124; x += 30) g.fillRect(x, 22, 3, 40); g.fillStyle = 'rgba(0,0,0,0.15)'; g.fillRect(0, S - 5, S, 5); }
   },
-  [CELL.CORRUG]: (g) => {
+  [CELL.CORRUG]: (g, em, lit, r) => {
     for (let x = 0; x < S; x += 8) {
       const gr = g.createLinearGradient(x, 0, x + 8, 0);
-      gr.addColorStop(0, '#ffffff'); gr.addColorStop(0.5, '#cfcfcf'); gr.addColorStop(1, '#f3f3f3');
+      gr.addColorStop(0, '#ffffff'); gr.addColorStop(0.5, '#c4c4c4'); gr.addColorStop(1, '#efefef');
       g.fillStyle = gr; g.fillRect(x, 0, 8, S);
     }
+    // traslapes, óxido y manchas de agua que escurren por las canaletas
+    g.fillStyle = 'rgba(0,0,0,0.22)'; g.fillRect(0, S * 0.5 - 1, S, 3);
+    for (let i = 0; i < 9; i++) {
+      const x = Math.floor(r() * 16) * 8, y = r() * S * 0.8, h = 14 + r() * 50;
+      g.fillStyle = `rgba(90,50,25,${0.1 + r() * 0.18})`; g.fillRect(x + 1, y, 5, h);
+    }
+    for (let i = 0; i < 40; i++) { g.fillStyle = `rgba(60,40,30,${0.1 + r() * 0.2})`; g.fillRect(r() * S, r() * S, 2 + r() * 3, 2 + r() * 3); }
+    g.fillStyle = 'rgba(255,255,255,0.28)'; g.fillRect(0, 0, S, 3);
   },
   [CELL.ROOFTILE]: (g, em, lit, r) => {
-    g.fillStyle = '#9a9a9a'; g.fillRect(0, 0, S, S);
-    for (let row = 0; row < 8; row++) {
-      for (let x = row % 2 ? -8 : 0; x < S; x += 16) {
-        const v = 220 + Math.floor(r() * 30);
-        const gr = g.createLinearGradient(0, row * 16, 0, row * 16 + 16);
-        gr.addColorStop(0, `rgb(${v},${v},${v})`); gr.addColorStop(1, `rgb(${v - 70},${v - 70},${v - 70})`);
-        g.fillStyle = gr; g.fillRect(x, row * 16, 15, 15);
+    g.fillStyle = '#8c8c8c'; g.fillRect(0, 0, S, S);
+    for (let row = 0; row < 10; row++) {
+      const h = S / 10;
+      for (let x = row % 2 ? -9 : 0; x < S; x += 18) {
+        const v = 205 + Math.floor(r() * 50);
+        const gr = g.createLinearGradient(0, row * h, 0, row * h + h);
+        gr.addColorStop(0, `rgb(${v},${v},${v})`); gr.addColorStop(1, `rgb(${v - 85},${v - 85},${v - 85})`);
+        g.fillStyle = gr; g.fillRect(x, row * h, 17, h - 1);
+        g.fillStyle = 'rgba(0,0,0,0.18)'; g.fillRect(x + 16, row * h, 1.5, h - 1);
       }
     }
+    // tejas desteñidas, musgo y hollín
+    for (let i = 0; i < 18; i++) { g.fillStyle = r() < 0.5 ? `rgba(40,60,30,${0.12 + r() * 0.18})` : `rgba(255,255,255,${0.1 + r() * 0.16})`; g.fillRect(r() * S, r() * S, 8 + r() * 22, 6 + r() * 12); }
   },
   [CELL.VENT]: (g, em) => {
     if (em) return;

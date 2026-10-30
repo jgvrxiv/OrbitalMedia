@@ -18,6 +18,7 @@ import { pickIndType, IND_JOBS, IND_TYPES } from './models_ind.js';
 import { pickOffType, OFF_JOBS, OFF_TYPES } from './models_off.js';
 import { PUBLIC, SERVICES, buildPublic } from './buildings.js';
 import { pickBigType } from './models_big.js';
+import { pickDeepType } from './models_deep.js';
 
 export const COST = { zone: 500, startMoney: 6_000_000 };
 export const ZONES = {
@@ -267,7 +268,7 @@ function recomputeAccess() {
 // frente de su vía actual.
 function reconcileBuildings() {
   for (const b of [...G.buildings]) {
-    if (b.kind === 'pub' || b.w > 1 || !b.h_) continue;
+    if (b.kind === 'pub' || b.w * b.h > 1 || !b.h_) continue;
     const i = idx(b.x, b.y);
     const pc = G.parcels?.get(i);
     if (b.da !== null && b.da !== undefined) {
@@ -417,7 +418,7 @@ export function removeBuilding(b) {
 
 function restyle(b, e) {
   b.e = e;
-  if (b.w > 1) { /* lote grande: conserva su tipo y sólo cambia el acabado */ }
+  if (b.w * b.h > 1) { /* lote grande: conserva su tipo y sólo cambia el acabado */ }
   else if (b.kind === 'res') b.type = pickResType(b.d, e, rand);
   else if (b.kind === 'com') b.type = pickComType(b.d, e, rand);
   else if (b.kind === 'off') b.type = pickOffType(b.d, e, rand);
@@ -756,6 +757,21 @@ function tryBig(t, k, e) {
   return false;
 }
 
+// casa de estrato 2-3 en lote de 1×2: el frente sobre la calle y el patio en la fila de atrás
+function tryDeep(t, e) {
+  const type = pickDeepType(ZONES[t.zone].d, e, rand);
+  if (!type) return false;
+  const i0 = idx(t.x, t.y);
+  const f = G.face[i0];
+  if (f < 0 || G.parcels?.has(i0) || G.depth[i0] !== 1) return false;
+  const fw = DIRS[f];
+  const bx = t.x - fw[0], by = t.y - fw[1], c = tile(bx, by);
+  if (!c || c.road || c.stop || c.bld || c.zone !== t.zone || G.parcels?.has(idx(bx, by))) return false;
+  if (G.face[idx(bx, by)] !== f || G.depth[idx(bx, by)] !== 2) return false;
+  addBuilding({ kind: 'res', d: ZONES[t.zone].d, e, type, x: Math.min(t.x, bx), y: Math.min(t.y, by), w: fw[0] ? 2 : 1, h: fw[0] ? 1 : 2, rot: f });
+  return true;
+}
+
 function spawn(t) {
   const Z = ZONES[t.zone];
   const i = idx(t.x, t.y);
@@ -767,6 +783,7 @@ function spawn(t) {
     let e = estratoOf(G.lv[i]);
     if (e > 1 && rand() < 0.2) e--;
     if (tryBig(t, 'r', e)) return;
+    if (tryDeep(t, e)) return;
     addBuilding({ ...base, kind: 'res', e, type: pickResType(Z.d, e, rand) });
   } else if (Z.k === 'o') {
     const e = estratoOf(G.lv[i]);

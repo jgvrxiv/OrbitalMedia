@@ -3,10 +3,11 @@
 import { CELL, shade } from './geom.js';
 import { ROW_TYPES, ROW_TABLE } from './models_row.js';
 import { BIG_RES } from './models_big.js';
+import { DEEP_TYPES } from './models_deep.js';
 import { REF_RES, REF_RES_TABLE } from './models_ref.js';
 import {
   F, PAL, lot, path, fence, tank, rebar, parapet, dish, antenna, acUnit, hvac, laundry, balcony, car, pool,
-  umbrella, pots, lamp, playground, pergola, columns, plinth, sign, pickW,
+  umbrella, pots, lamp, playground, pergola, columns, plinth, sign, pickW, roofCover,
 } from './kit.js';
 
 const WIN = {
@@ -132,16 +133,7 @@ function casaBarrio(B, e) {
   const garage = e >= 3 && r() < 0.55 ? (doorCol === 0 ? 2 : 0) : undefined;
   plinth(B, 0, z, w, d, shade(paint, 0.72));
   B.box(0, 0, z, w, H, d, paint, { fl: floors, cw: 0.24, pick: facade(r, e, { doorCol, garageCol: garage }) });
-  const roof = r();
-  const clay = r.pick(PAL.clay);
-  if (roof < 0.4) B.gable(0, H, z, w + 0.08, 0.16, d + 0.08, clay, 'x', { gable: paint });
-  else if (roof < 0.7) B.hip(0, H, z, w + 0.08, 0.15, d + 0.08, clay);
-  else {
-    B.box(0, H, z, w + 0.02, 0.025, d + 0.02, '#a7a39b');
-    parapet(B, 0, H + 0.025, z, w, d, 0.05, paint);
-    tank(B, -w * 0.28, H + 0.025, z - d * 0.2);
-    if (e === 2) laundry(B, 0.1, H + 0.14, z, w * 0.5, 'x');
-  }
+  roofCover(B, e, 0, H, z, w, d, { paint, ridge: 'x' });
   if (floors === 2 && r() < 0.6) balcony(B, 0, F, z + d / 2, w * 0.45, 0.08, 'front', { rail: '#2a2a2a' });
   if (e >= 3) B.box((doorCol - 1) * 0.24, F * 0.82, z + d / 2 + 0.045, 0.18, 0.018, 0.09, '#9e9a92');
   fence(B, e <= 2 ? 'reja' : r() < 0.5 ? 'reja' : 'muro', { sides: ['front'], color: shade(paint, 0.9) });
@@ -637,7 +629,7 @@ const TABLE = {
 };
 
 // vivienda continua de estratos 1-3 (models_row.js): reemplaza a las casas aisladas en los estratos bajos
-Object.assign(RES_TYPES, ROW_TYPES, BIG_RES); // BIG_RES: lotes de 2×2 (se eligen aparte, ver game.js)
+Object.assign(RES_TYPES, ROW_TYPES, BIG_RES, DEEP_TYPES); // BIG_RES: lotes de 2×2 (se eligen aparte, ver game.js)
 for (const [d, byE] of Object.entries(ROW_TABLE)) {
   for (const [e, list] of Object.entries(byE)) {
     const replace = (d === '1' && e <= 2) || (d === '2' && e === '1');
