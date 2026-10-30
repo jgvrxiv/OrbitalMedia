@@ -195,7 +195,7 @@ function fabricaGrande(B, e, spec) {
 }
 
 export const BIG_RES = {
-  mansionGrande: { name: 'Mansión en lote grande', fn: mansionGrande, pop: 3.2, size: 2 },
+  mansionGrande: { name: 'Mansión en lote grande', fn: mansionGrande, pop: 3.2, size: 2, lot: [2, 3] },
   haciendaGrande: { name: 'Hacienda colonial', fn: haciendaGrande, pop: 3, size: 2 },
   conjuntoCerrado: { name: 'Conjunto cerrado', fn: conjuntoCerrado, pop: 4.5, size: 2 },
   torresPodio: { name: 'Torres sobre podio', fn: torresPodio, pop: 5, size: 2 },

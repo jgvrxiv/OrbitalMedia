@@ -10,13 +10,18 @@ import { BIG_RES, BIG_COM, BIG_IND } from './models_big.js';
 export const VARIANTS = 4; // variantes por combinación (paletas/disposición)
 const cache = new Map();
 
-export const keyOf = (s) => `${s.kind}:${s.type}:${s.e || 0}:${s.v || 0}` + ((s.sw || 1) * (s.sd || 1) > 1 ? `:${s.sw}x${s.sd}` : '');
+export const keyOf = (s) => `${s.kind}:${s.type}:${s.e || 0}:${s.v || 0}` + (((s.sw || 1) !== 1 || (s.sd || 1) !== 1) ? `:${s.sw}x${s.sd}` : '');
 
 const tableOf = (kind) => (kind === 'res' ? RES_TYPES : kind === 'com' ? COM_TYPES : kind === 'off' ? OFF_TYPES : IND_TYPES);
 // ancho (sobre la calle) y fondo, en casillas, con que hay que estirar el modelo de un edificio; 1×1 si su modelo ya es del tamaño del lote
+// lote (ancho × fondo en casillas) para el que se elige un tipo con modelo propio, si no es el de su tamaño nativo
+export const lotOf = (kind, type) => { const T = tableOf(kind)[type] || {}; return T.lot || T.native || (T.size ? [2, 2] : [1, 1]); };
 export function scaleOf(b) {
-  if (b.kind === 'pub' || b.w * b.h <= 1 || tableOf(b.kind)[b.type]?.size) return [1, 1];
-  return b.rot % 2 ? [b.h, b.w] : [b.w, b.h];
+  if (b.kind === 'pub' || b.w * b.h <= 1) return [1, 1];
+  const T = tableOf(b.kind)[b.type] || {};
+  const [nw, nd] = T.native || (T.size ? [2, 2] : [1, 1]); // tamaño (casillas) para el que se dibujó el modelo
+  const [tw_, td] = b.rot % 2 ? [b.h, b.w] : [b.w, b.h]; // ancho sobre la calle y fondo del lote
+  return [tw_ / nw, td / nd];
 }
 
 function hash(str) {
@@ -31,7 +36,7 @@ export function buildModel(spec) {
   if (cache.has(key)) return cache.get(key);
   if (spec.kind === 'pub') { const g = buildPublic(spec.type); cache.set(key, g); return g; }
   const B = new Builder(hash(key));
-  if (!T0(spec).size) { B.sx = spec.sw || 1; B.sz = spec.sd || 1; }
+  B.sx = spec.sw || 1; B.sz = spec.sd || 1;
   const T = spec.kind === 'res' ? RES_TYPES : spec.kind === 'com' ? COM_TYPES : spec.kind === 'off' ? OFF_TYPES : IND_TYPES;
   T[spec.type].fn(B, spec.e || 1, spec);
   const g = B.build();
@@ -76,7 +81,7 @@ export const MODEL_SETS = {
   ],
   row: () => ['hileraPopular', 'hileraAlta'].flatMap((t) => [1, 2, 3].flatMap((e) => [0, 1, 2, 3].map((v) => ({ kind: 'res', type: t, e, v, label: `${t} E${e} v${v}` })))),
   big: () => [
-    ...[['casaFondo', 2], ['casaFondo', 3], ['casa4', 4], ['casa5', 5]].flatMap(([t, e]) => [0, 1, 2, 3].map((v) => ({ kind: 'res', type: t, e, v, w: 1.5, label: `${t} E${e} v${v}` }))),
+    ...[['casaFondo', 2], ['casa3Portico', 3], ['casa4', 4], ['casa4Blanca', 4], ['casa5', 5]].flatMap(([t, e]) => [0, 1, 2, 3].map((v) => ({ kind: 'res', type: t, e, v, w: 1.5, label: `${t} E${e} v${v}` }))),
     ...Object.keys(BIG_RES).flatMap((t) => [6].flatMap((e) => [0, 1].map((v) => ({ kind: 'res', type: t, e, v, w: 2, label: `${t} E${e} v${v}` })))),
     ...[0, 1].map((v) => ({ kind: 'com', type: 'centroComercialGrande', e: 4, v, w: 2, label: `centroComercialGrande v${v}` })),
     ...[0, 1].map((v) => ({ kind: 'ind', type: 'fabricaGrande', e: 3, v, w: 2, label: `fabricaGrande v${v}` })),

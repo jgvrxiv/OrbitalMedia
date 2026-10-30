@@ -11,7 +11,7 @@ import { InstPools } from './render.js';
 import { ROADS, buildRoadMesh } from './roads.js';
 import { buildParcels } from './parcels.js';
 import { DIAG, createNet, lanesOf, addSegment, removeCell, rasterize, netFromTiles, serializeNet, loadNet, crossLevels } from './roadnet.js';
-import { buildModel, VARIANTS, typeName, hasModel, scaleOf } from './models.js';
+import { buildModel, VARIANTS, typeName, hasModel, scaleOf, lotOf } from './models.js';
 import { pickResType, resPop } from './models_res.js';
 import { pickComType, COM_JOBS, COM_TYPES, tierOf } from './models_com.js';
 import { pickIndType, IND_JOBS, IND_TYPES } from './models_ind.js';
@@ -173,7 +173,7 @@ function bldMatrix(b, sy = 1) {
 export const modelKey = (b) => {
   if (b.kind === 'pub') return 'pub:' + b.key;
   const [sw, sd] = scaleOf(b);
-  return `${b.kind}:${b.type}:${b.kind === 'ind' ? 3 : b.e}:${b.v}` + (sw * sd > 1 ? `:${sw}x${sd}` : '');
+  return `${b.kind}:${b.type}:${b.kind === 'ind' ? 3 : b.e}:${b.v}` + (sw !== 1 || sd !== 1 ? `:${sw}x${sd}` : '');
 };
 
 // ---------- obra en construcción: andamio que sube con el edificio y grúa en los altos ----------
@@ -736,14 +736,17 @@ export function bulldoze(tiles) {
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
 // Lote grande de 2×2: busca un bloque libre de la misma zona con la fila delantera frente a la misma vía.
-// tamaño del lote (ancho sobre la calle × fondo, en casillas) según el uso, la densidad y el estrato:
-// las casas de estrato 1 caben en 1×1; el resto de casas necesita al menos 2 de fondo; los edificios medios son de
-// 1×2 y los altos de 2×2
-function footprintFor(k, d, e) {
-  if (k === 'i') return [2, 3]; // la industria necesita al menos 2 de frente × 3 de fondo
-  if (d >= 3) return [2, 2];
-  if (d === 2) return [1, 2];
-  return k === 'r' && e >= 2 ? [1, 2] : [1, 1];
+// tamaños de lote posibles (ancho sobre la calle × fondo, en casillas, con su peso) según el uso, la densidad y el
+// estrato: las casas de estrato 1 caben en 1×1; el resto de casas necesita al menos 2 de fondo y las de estratos
+// 5-6 son de 2×3; los edificios medios son de 1×2 en adelante y los altos de 2×2 a 3×4; la industria, de 2×3 en adelante
+function footprintOptions(k, d, e) {
+  if (k === 'i') return [[2, 3, 0.55], [3, 3, 0.3], [3, 4, 0.15]];
+  if (d >= 3) return [[2, 2, 0.35], [2, 3, 0.25], [3, 3, 0.25], [3, 4, 0.15]];
+  if (d === 2) return [[1, 2, 0.55], [2, 2, 0.3], [2, 3, 0.15]];
+  if (k !== 'r') return [[1, 1, 1]];
+  if (e >= 5) return [[2, 3, 1]];
+  if (e >= 4) return [[1, 2, 0.7], [2, 2, 0.3]];
+  return e >= 2 ? [[1, 2, 1]] : [[1, 1, 1]];
 }
 
 // busca un lote libre de W (sobre la calle) × D (de fondo) con su frente en la casilla t; devuelve su esquina y tamaño
@@ -775,9 +778,11 @@ function tryBig(t, k, e) {
   const Z = ZONES[t.zone];
   const type = pickBigType(k, Z.d, e, rand);
   if (!type) return false;
-  const L = findLot(t, 2, 2);
+  const kind = { r: 'res', c: 'com', i: 'ind' }[k];
+  const [W, D] = lotOf(kind, type);
+  const L = findLot(t, W, D);
   if (!L) return false;
-  addBuilding({ kind: { r: 'res', c: 'com', i: 'ind' }[k], d: Z.d, e, type, ...L });
+  addBuilding({ kind, d: Z.d, e, type, ...L });
   return true;
 }
 
@@ -785,7 +790,8 @@ function tryBig(t, k, e) {
 function tryDeep(t, e) {
   const type = pickDeepType(ZONES[t.zone].d, e, rand);
   if (!type) return false;
-  const L = findLot(t, 1, 2);
+  const [W, D] = lotOf('res', type);
+  const L = findLot(t, W, D);
   if (!L) return false;
   addBuilding({ kind: 'res', d: ZONES[t.zone].d, e, type, ...L });
   return true;
@@ -793,12 +799,23 @@ function tryDeep(t, e) {
 
 // edificio común: su modelo se estira al lote que le corresponde; si el lote no cabe, no se construye
 function spawnSized(t, kind, e, type, base) {
-  const [W, D] = footprintFor({ res: 'r', com: 'c', off: 'o', ind: 'i' }[kind], ZONES[t.zone].d, e);
-  if (W * D === 1 || base.da !== null) { addBuilding({ ...base, kind, e, type }); return true; }
-  const L = findLot(t, W, D);
-  if (!L) return false;
-  addBuilding({ ...base, kind, e, type, ...L, da: null, px: null, py: null });
-  return true;
+  const opts = footprintOptions({ res: 'r', com: 'c', off: 'o', ind: 'i' }[kind], ZONES[t.zone].d, e);
+  if (opts.length === 1 && opts[0][0] * opts[0][1] === 1 || base.da !== null) { addBuilding({ ...base, kind, e, type }); return true; }
+  // se intenta un tamaño al azar (por peso) y, si no cabe, los demás de mayor a menor peso; el mínimo es el último
+  const order = [];
+  const pool = [...opts];
+  while (pool.length) {
+    let r = rand() * pool.reduce((a, o) => a + o[2], 0), i = 0;
+    for (; i < pool.length - 1; i++) { r -= pool[i][2]; if (r <= 0) break; }
+    order.push(pool.splice(i, 1)[0]);
+  }
+  const smallest = [...opts].sort((a, b) => a[0] * a[1] - b[0] * b[1])[0];
+  order.sort((a, b) => (a === order[0] ? -1 : b === order[0] ? 1 : (a === smallest ? 1 : b === smallest ? -1 : 0)));
+  for (const [W, D] of order) {
+    const L = findLot(t, W, D);
+    if (L) { addBuilding({ ...base, kind, e, type, ...L, da: null, px: null, py: null }); return true; }
+  }
+  return false;
 }
 
 // devuelve true si construyó

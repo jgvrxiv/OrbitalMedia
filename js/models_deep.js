@@ -124,13 +124,75 @@ function casa5(B, e, spec) {
   void v; void columns;
 }
 
+// Estrato 4 (foto de referencia): casa blanca de dos pisos con garaje doble de madera, aleros de teja con canecillos
+// de madera, ventanal con marco de madera y reja de forja, muro blanco con pilares rematados en teja y reja negra.
+function casa4Blanca(B, e, spec) {
+  const r = B.r; const v = (spec && spec.v) || 0;
+  const white = r.pick(['#f4f1ea', '#efeae0', '#f1ece3']), wood = r.pick(['#8a4f2c', '#7a4527', '#94572f']), clay = r.pick(PAL.clay);
+  B.plane(0, 0.01, 0, 1, 2, '#a9a59a');
+  B.plane(-0.2, 0.014, 0.78, 0.55, 0.38, '#9a5a45'); // entrada de carros en adoquín
+  B.plane(0.28, 0.013, 0.8, 0.4, 0.3, '#7fae62');
+  B.plane(0, 0.013, -0.5, 0.98, 1.0, '#8fb87a');
+  B.box(0, 0, -0.997, 1, 0.12, 0.012, '#cfc8b8');
+  // cuerpo principal: garaje + sala abajo, ventanal arriba
+  B.box(0, 0, 0.1, 0.9, F * 2.1, 1.0, white, { fl: 2, cw: 0.15, pick: (f, c, Fn, CC, side) => {
+    if (side === 'front') return f === 0 ? (c < 3 ? [CELL.GARAGE, wood] : c === 4 ? CELL.WIN_BARS : CELL.PLAIN) : (c % 3 === 1 ? CELL.WIN_BIG : CELL.WIN_BARS);
+    if (side === 'back') return r() < 0.7 ? CELL.WIN_SLIDE : CELL.PLAIN;
+    return r() < 0.2 ? CELL.WIN_SLIDE : CELL.PLAIN;
+  } });
+  // alero de teja sobre el garaje y el primer piso, con canecillos
+  B.shed(0, F * 1.05, 0.64, 0.98, 0.26, 0.0, 0.06, clay, 'z-', CELL.ROOFTILE);
+  for (let i = 0; i < 9; i++) B.box(-0.42 + i * 0.105, F * 1.0, 0.74, 0.02, 0.02, 0.08, wood);
+  // techo a dos aguas con alero ancho
+  B.gable(0, F * 2.1, 0.1, 0.98, 0.16, 1.06, clay, v % 2 ? 'x' : 'z', { gable: white, cell: CELL.ROOFTILE });
+  chimney(B, 0.3, -0.2, F * 2.5, 0.04, false);
+  // muro con pilares rematados en teja y reja de forja
+  const zw = 0.97;
+  for (const x of [-0.46, -0.1, 0.0, 0.46]) { B.box(x, 0, zw, 0.07, 0.17, 0.07, white); B.box(x, 0.17, zw, 0.095, 0.025, 0.095, clay); }
+  B.box(0.23, 0, zw, 0.4, 0.07, 0.04, white);
+  for (let i = 0; i <= 9; i++) B.box(0.05 + i * 0.04, 0.07, zw, 0.006, 0.1, 0.006, '#1a1a1a');
+  B.box(0.23, 0.17, zw, 0.4, 0.008, 0.008, '#1a1a1a');
+  for (let i = 0; i <= 10; i++) B.box(-0.4 + i * 0.03, 0.0, zw, 0.006, 0.17, 0.006, '#1a1a1a');
+  B.sphere(0.27, 0.12, 0.84, 0.07, '#3f8f3a', 1, 1, 1, 8); // arbusto redondo podado
+  B.cyl(0.27, 0.0, 0.84, 0.01, 0.06, '#5a3a22', 5);
+  B.tree(-0.3, -0.65, 0.3, '#4f9a3c'); B.palm(0.32, -0.55, 0.7, false);
+}
+
+// Estrato 3 (foto de referencia): casa de dos pisos con garaje bajo un alero de teja sostenido por pilares de ladrillo,
+// rejas blancas, segundo piso en estuco naranja o crema con ventanas enrejadas y techo de teja.
+function casa3Portico(B, e, spec) {
+  const r = B.r; const v = (spec && spec.v) || 0;
+  const upper = r.pick(['#e6a43a', '#e9b95c', '#f1e4cc', '#e8c07a']), lower = r.pick(['#f1e8d6', '#e8dcc6']), brick = r.pick(PAL.brick), clay = r.pick(PAL.clay);
+  B.plane(0, 0.01, 0, 1, 2, '#a39e92');
+  B.plane(0, 0.013, 0.78, 0.96, 0.4, '#9a5a45'); // piso de ladrillo del garaje
+  B.plane(0, 0.013, -0.5, 0.98, 1.0, '#a89d82');
+  B.box(0, 0, -0.997, 1, 0.1, 0.012, '#cfc8b8');
+  // casa: planta baja con puerta y ventana, piso alto enrejado
+  B.box(0, 0, 0.05, 0.94, F * 1.05, 0.9, lower, { fl: 1, cw: 0.2, pick: (f, c, Fn, CC, side) => (side === 'front' ? (c === 1 ? [CELL.DOOR, '#4a3326'] : CELL.WIN_BARS) : r() < 0.5 ? CELL.WIN_SLIDE : CELL.PLAIN) });
+  B.box(0, F * 1.05, 0.0, 0.94, F * 1.05, 0.8, upper, { fl: 1, cw: 0.22, pick: (f, c, Fn, CC, side) => (side === 'front' ? (c % 2 ? CELL.WIN_BARS : CELL.WIN_SLIDE) : r() < 0.6 ? CELL.WIN_SLIDE : CELL.PLAIN) });
+  roofCover(B, 3, 0, F * 2.1, 0.0, 0.94, 0.8, { paint: upper, ridge: v % 2 ? 'x' : 'z' });
+  // garaje cubierto: pilares de ladrillo, cubierta de teja y rejas blancas
+  const gz = 0.78;
+  B.shed(0, F * 1.0, gz, 0.96, 0.46, 0.0, 0.07, clay, 'z-', CELL.ROOFTILE);
+  for (const x of [-0.46, -0.1, 0.26, 0.46]) B.box(x, 0, 0.99, 0.06, F * 1.0, 0.06, brick);
+  B.box(-0.28, 0, 0.99, 0.3, 0.06, 0.02, brick);
+  for (let i = 0; i <= 18; i++) { const x = -0.43 + i * 0.05; if (x < -0.12 || x > 0.28) B.box(x, 0.06, 0.99, 0.008, 0.18, 0.008, '#f4f4f0'); }
+  B.box(0.0, 0.24, 0.99, 0.9, 0.01, 0.01, '#f4f4f0');
+  car(B, 0.08, 0.82, 1, r.pick(['#e8e8e8', '#8a8d90', '#9a2b2b']));
+  if (r() < 0.6) B.bush(0.4, 0.88, 0.06, '#3f8f3a');
+  B.tree(-0.3, -0.6, 0.28, '#4f9a3c'); laundry(B, 0.2, 0.1, -0.6, 0.4, 'x');
+}
+
 export const DEEP_TYPES = {
-  casaFondo: { name: 'Casa con patio largo (1×2)', fn: casaFondo, pop: 1.5, size: 2 },
-  casa4: { name: 'Casa de dos pisos con garaje', fn: casa4, pop: 1.7, size: 2 },
-  casa5: { name: 'Casa de ladrillo y vidrio', fn: casa5, pop: 1.9, size: 2 },
+  // native: casillas para las que se dibujó el modelo; lot: lote que ocupa (el modelo se estira de uno a otro)
+  casaFondo: { name: 'Casa con patio largo (1×2)', fn: casaFondo, pop: 1.5, native: [1, 2] },
+  casa3Portico: { name: 'Casa con garaje cubierto', fn: casa3Portico, pop: 1.5, native: [1, 2] },
+  casa4: { name: 'Casa de dos pisos con garaje', fn: casa4, pop: 1.7, native: [1, 2] },
+  casa4Blanca: { name: 'Casa blanca con garaje de madera', fn: casa4Blanca, pop: 1.7, native: [1, 2] },
+  casa5: { name: 'Casa de ladrillo y vidrio', fn: casa5, pop: 1.9, native: [1, 2], lot: [2, 3] },
 };
 export const DEEP_TABLE = { // [tipo, probabilidad] por densidad y estrato (baja densidad)
-  1: { 2: [['casaFondo', 0.35]], 3: [['casaFondo', 0.4]], 4: [['casa4', 0.55]], 5: [['casa5', 0.6]] },
+  1: { 2: [['casa3Portico', 0.3], ['casaFondo', 0.35]], 3: [['casa3Portico', 0.4], ['casaFondo', 0.35]], 4: [['casa4Blanca', 0.45], ['casa4', 0.3]], 5: [['casa5', 0.6]] },
 };
 export function pickDeepType(d, e, rand) {
   for (const [t, p] of DEEP_TABLE[d]?.[e] || []) if (rand() < p) return t;
