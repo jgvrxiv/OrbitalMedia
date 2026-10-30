@@ -81,52 +81,65 @@ function torreNaranja(B) {
   B.box(0, yC, 0, cw, cH, cw, '#5b7f9a', { fl: 6, cw: M(1.5), pick: () => CELL.CURTAIN });
   B.box(0, yC + cH, 0, cw + M(0.8), M(0.8), cw + M(0.8), '#2b3a46');
   const top = yC + cH + M(16), ap = [0, top, 0];
-  for (const [sx, sz] of [[-1, 1], [1, 1], [-1, -1], [1, -1]]) {
-    strut(B, [sx * W / 2, yC - M(10), sz * W / 2], [sx * M(2.2), top - M(6), sz * M(2.2)], M(0.9), orange);
-  }
   for (const s of [-1, 1]) {
-    strut(B, [s * W / 2, yC - M(10), W / 2], [0, yC - M(34), W / 2 + 0.01], M(0.8), orange); // V invertida de la fachada
-    strut(B, [0, yC - M(34), W / 2 + 0.01], [0, y0, W / 2 + 0.01], M(0.9), orange);
+    strut(B, [s * W / 2, yC, W / 2 + 0.01], [0, yC - M(24), W / 2 + 0.01], M(0.8), orange); // V de la fachada
+    strut(B, [0, yC - M(24), W / 2 + 0.01], [0, y0, W / 2 + 0.01], M(0.9), orange);
   }
   B.box(0, yC + cH * 0.45, W * 0.0 + cw / 2 + 0.01, M(5), M(5), 0.012, '#26303a'); // logo
-  // cúpula de vidrio de cuatro aguas y mástil
-  B.hip(0, yC + cH + M(0.8), 0, cw - M(1), M(14), cw - M(1), '#7fa3bd', CELL.PANEL);
-  B.cyl(0, top, 0, M(0.5), M(14), '#d9d9d9', 6, M(0.1));
+  // corona en pentágono: techo a dos aguas de vidrio con el exoesqueleto naranja siguiendo sus aristas, y mástil
+  const yR = yC + cH + M(0.8), rh = M(15);
+  B.gable(0, yR, 0, cw - M(1), rh, cw - M(1), '#7fa3bd', 'x', { gable: '#5b7f9a', cell: CELL.PANEL });
+  for (const sz of [1, -1]) for (const sx of [-1, 1]) strut(B, [sx * (cw - M(1)) / 2, yR, sz * (cw - M(1)) / 2 + sz * 0.006], [0, yR + rh, sz * (cw - M(1)) / 2 + sz * 0.006], M(0.8), orange);
+  B.cyl(0, yR + rh, 0, M(0.5), M(14), '#d9d9d9', 6, M(0.1));
   void ap;
   B.tree(-0.9, 0.9, 0.3); B.tree(0.9, 0.9, 0.3);
 }
 
 // ---------------- BD Bacatá ----------------
+// Dos torres unidas por un núcleo claro sobre un basamento comercial. La torre alta (216 m) es una pirámide escalonada:
+// el borde izquierdo y el fondo quedan a plomo y el lado derecho y el frente retroceden en cada nivel, dejando terrazas de
+// vidrio con jardineras; remata en una corona de vidrio con mástil. La torre izquierda es gris, de ventanas en franja.
 function bdBacata(B) {
-  const glass = '#9fb9cc', dkGlass = '#6e7a84';
+  const glass = '#9fb9cc';
   B.plane(0, 0.012, 0, 2.95, 2.95, '#bcb8ad');
   // basamento comercial
-  B.box(0, 0, M(2), M(34), M(12), M(30), '#cdbfae', { fl: 3, cw: M(4), pick: (f, c, F, C, side) => (side === 'front' ? (f === 0 ? CELL.SHOP : CELL.FLOORGLASS) : CELL.PLAIN) });
-  B.box(0, M(12), M(2), M(34.6), 0.02, M(30.6), '#9c978c');
-  const yb = M(12) + 0.02;
-  // torre izquierda: aluminio gris oscuro con ventanas en franja y cuerpos escalonados
-  const FT = M(3.5);
-  B.box(-M(10), yb, -M(3), M(14), 40 * FT, M(20), dkGlass, { fl: 40, cw: M(1.6), pick: () => CELL.CURTAIN });
-  B.box(-M(10), yb + 40 * FT, -M(3), M(15), M(3), M(21), '#4b545c');
-  B.box(-M(17.5), yb, -M(3), M(5), M(52), M(17), '#8d949a', { fl: 14, cw: M(1.6), pick: () => CELL.WIN_SLIDE });
-  B.box(-M(14.5), yb, -M(3), M(5), M(95), M(19), '#7b838a', { fl: 27, cw: M(1.6), pick: () => CELL.WIN_SLIDE });
-  // núcleo de ascensores/escaleras claro entre las torres
-  B.box(-M(1), yb, -M(3), M(5), M(125), M(12), '#d9d9d6', { fl: 35, cw: M(1.4), pick: () => CELL.WIN_SLIDE });
-  // torre derecha: base de concreto y terrazas escalonadas de vidrio
-  const rx = M(10);
-  B.box(rx, yb, -M(3), M(15), M(70), M(17), '#8d949a', { fl: 20, cw: M(1.6), pick: () => CELL.CURTAIN });
-  let y = yb + M(70);
+  B.box(0, 0, M(2), M(35), M(12), M(31), '#b9a894', { fl: 3, cw: M(4), pick: (f, c, F, C, side) => (side === 'front' ? (f === 0 ? CELL.SHOP : CELL.FLOORGLASS) : CELL.PLAIN) });
+  B.box(0, M(12), M(2), M(35.6), 0.02, M(31.6), '#8f8a80');
+  const yb = M(12) + 0.02, zb = -M(14); // fondo común de las torres
+  // torre izquierda: gris, 44 pisos, con retranqueo superior
+  const FT = M(3.7);
+  B.box(-M(11.5), yb, zb, M(11), 32 * FT, M(20), '#7a8187', { fl: 32, cw: M(1.7), pick: () => CELL.CURTAIN });
+  B.box(-M(11.5), yb + 32 * FT, zb, M(9), 12 * FT, M(17), '#6c7379', { fl: 12, cw: M(1.7), pick: () => CELL.CURTAIN });
+  B.box(-M(11.5), yb + 44 * FT, zb, M(9.4), M(1.2), M(17.4), '#454b50');
+  B.box(-M(16.8), yb, zb, M(4), M(70), M(16), '#8d949a', { fl: 18, cw: M(1.7), pick: () => CELL.WIN_SLIDE }); // cuerpo bajo al borde
+  // núcleo claro que une las dos torres
+  B.box(-M(4.5), yb, zb, M(4), M(150), M(12), '#d6d6d2', { fl: 40, cw: M(1.4), pick: () => CELL.WIN_SLIDE });
+  // torre alta: base de concreto y 9 niveles de vidrio que retroceden hacia la derecha y el frente
+  const xl = -M(2.5);
+  const baseW = M(19), baseD = M(23);
+  B.box(xl + baseW / 2, yb, zb + baseD / 2, baseW, M(24), baseD, '#8d949a', { fl: 6, cw: M(1.6), pick: () => CELL.CURTAIN });
+  let y = yb + M(24), pw = baseW, pd = baseD;
+  B.box(xl + pw / 2, y, zb + pd / 2, pw + M(0.6), M(0.9), pd + M(0.6), '#ececec');
+  y += M(0.9);
   for (let k = 0; k < 9; k++) {
-    const dz = k % 2 ? M(2.5) : -M(0.5), dx = (k % 3 - 1) * M(0.8), hh = M(16);
-    B.box(rx + dx, y, -M(3) + dz, M(13.5 - (k > 5 ? 1.5 : 0)), hh, M(15), glass, { fl: 4, cw: M(1.5), pick: () => CELL.CURTAIN });
-    B.box(rx + dx, y + hh, -M(3) + dz, M(14.2 - (k > 5 ? 1.5 : 0)), M(0.7), M(15.8), '#ececec'); // losa de la terraza
-    if (k % 2 === 0) { B.box(rx + dx - M(3), y + hh + M(0.7), -M(3) + dz + M(7.2), M(5), M(1.2), M(2), '#4d8f3f'); }
-    y += hh + M(0.7);
+    const w = baseW - (k + 1) * M(1.4), d = baseD - (k + 1) * M(1.5), hh = M(17);
+    B.box(xl + w / 2, y, zb + d / 2, w, hh, d, glass, { fl: 4, cw: M(1.5), pick: () => CELL.CURTAIN });
+    // terraza que deja el nivel de abajo: losa blanca y jardinera al borde
+    B.box(xl + pw / 2, y - M(0.05), zb + pd / 2, pw + M(0.5), M(0.5), pd + M(0.5), '#ececec');
+    if (k % 2 === 0) {
+      B.box(xl + w + (pw - w) / 2, y + M(0.45), zb + pd / 2, M(0.9), M(0.9), pd - M(2), '#4d8f3f');
+      B.box(xl + pw / 2, y + M(0.45), zb + d + (pd - d) / 2, pw - M(2), M(0.9), M(0.9), '#4d8f3f');
+    }
+    y += hh;
+    pw = w; pd = d;
   }
   // corona de vidrio y mástil
-  B.box(rx, y, -M(3), M(11), M(30), M(13), '#bcd6e6', { fl: 8, cw: M(1.4), pick: () => CELL.FLOORGLASS, top: '#33414d' });
-  B.box(rx, y + M(30), -M(3), M(9), M(2), M(11), '#33414d');
-  B.cyl(rx, y + M(32), -M(3), M(0.5), M(16), '#d9d9d9', 6, M(0.1));
+  B.box(xl + pw / 2, y, zb + pd / 2, pw + M(0.4), M(0.8), pd + M(0.4), '#ececec');
+  B.box(xl + pw / 2, y + M(0.8), zb + pd / 2, pw - M(1), M(28), pd - M(1), '#bcd6e6', { fl: 8, cw: M(1.3), pick: () => CELL.FLOORGLASS, top: '#33414d' });
+  B.box(xl + pw / 2, y + M(28.8), zb + pd / 2, pw - M(2), M(2), pd - M(2), '#33414d');
+  B.cyl(xl + pw / 2, y + M(30.8), zb + pd / 2, M(0.5), M(14), '#d9d9d9', 6, M(0.1));
+  // columna de escaleras clara en el borde izquierdo
+  B.box(xl + M(1.2), yb, zb + M(6), M(2.4), M(190), M(8), '#d9d9d6', { fl: 50, cw: M(1.2), pick: () => CELL.WIN_SLIDE });
   // bloque bajo de ladrillo al frente (la "casona" del conjunto)
   B.box(M(12), yb, M(11), M(14), M(18), M(10), '#8c6a52', { fl: 5, cw: M(2), pick: () => CELL.WIN_SLIDE });
   B.tree(-1.2, 1.2, 0.3); B.tree(0.2, 1.3, 0.3); B.palm(-0.6, 1.35, 0.7, true);
