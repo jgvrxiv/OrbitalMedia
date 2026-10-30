@@ -206,7 +206,7 @@ function siteMatrix(b, sy, crane = false) {
   _q.setFromAxisAngle(_up, diag ? b.da : ROT[b.rot] ?? 0);
   if (diag && b.px !== null && b.px !== undefined) _p.set(b.px - N / 2 + 0.5, b.top, b.py - N / 2 + 0.5);
   else _p.set(tw(b.x) + (b.w - 1) / 2, b.top, tw(b.y) + (b.h - 1) / 2);
-  const h = crane ? b.mh * 1.25 + 0.4 : Math.max(0.05, sy);
+  const h = crane ? Math.min(b.mh * 1.25 + 0.4, 4) : Math.max(0.05, sy);
   const kk = b.kind === 'pub' && diag ? 0.72 : 1;
   _s.set(b.w * kk, h, b.h * kk);
   return _m.compose(_p, _q, _s);
@@ -818,6 +818,34 @@ function spawnSized(t, kind, e, type, base) {
   return false;
 }
 
+// rascacielos emblemático (único): sólo en oficinas de alta densidad
+function tryIcon(t, e) {
+  const Z = ZONES[t.zone];
+  if (Z.d < 3 || rand() > (G.iconChance ?? 0.05)) return false;
+  const missing = Object.keys(OFF_TYPES).filter((k) => OFF_TYPES[k].icon && !G.buildings.some((b) => b.type === k));
+  if (!missing.length) return false;
+  const type = missing[Math.floor(rand() * missing.length)];
+  const [W, D] = lotOf('off', type);
+  const L = findLot(t, W, D);
+  if (!L) return false;
+  addBuilding({ kind: 'off', d: Z.d, e, type, ...L });
+  return true;
+}
+
+// coloca los rascacielos emblemáticos que falten en las zonas de oficinas de alta densidad (ciudad de ejemplo)
+export function ensureIcons() {
+  for (const type of Object.keys(OFF_TYPES).filter((k) => OFF_TYPES[k].icon && !G.buildings.some((b) => b.type === k))) {
+    const [W, D] = lotOf('off', type);
+    let done = false;
+    for (let y = 0; y < N && !done; y++) for (let x = 0; x < N && !done; x++) {
+      const t = G.grid[y][x];
+      if (!t.zone || ZONES[t.zone].k !== 'o' || ZONES[t.zone].d < 3 || t.bld) continue;
+      const L = findLot(t, W, D);
+      if (L) { addBuilding({ kind: 'off', d: 3, e: 6, type, ...L }); done = true; }
+    }
+  }
+}
+
 // devuelve true si construyó
 function spawn(t) {
   const Z = ZONES[t.zone];
@@ -833,6 +861,7 @@ function spawn(t) {
     return spawnSized(t, 'res', e, pickResType(Z.d, e, rand), base);
   } else if (Z.k === 'o') {
     const e = estratoOf(G.lv[i]);
+    if (tryIcon(t, e)) return true;
     return spawnSized(t, 'off', e, pickOffType(Z.d, e, rand), base);
   } else if (Z.k === 'c') {
     const e = estratoOf(G.lv[i]);

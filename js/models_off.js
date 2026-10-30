@@ -54,6 +54,7 @@ function centroEmpresarial(B, e) {
   lamp(B, -0.08, 0.42, 0.25); lamp(B, 0.42, 0.42, 0.25);
 }
 
+import { ICON_TYPES } from './models_icon.js';
 export const OFF_TYPES = {
   casaOficinas: { name: 'Casa de oficinas', fn: casaOficinas, jobs: 1 },
   centroEmpresarial: { name: 'Centro empresarial', fn: centroEmpresarial, jobs: 1.2 },
@@ -75,4 +76,5 @@ export function pickOffType(d, e, r) {
   for (const [v, w] of list) { t -= w; if (t <= 0) return v; }
   return list[list.length - 1][0];
 }
+Object.assign(OFF_TYPES, ICON_TYPES);
 export const OFF_JOBS = { 1: 20, 2: 60, 3: 200 };

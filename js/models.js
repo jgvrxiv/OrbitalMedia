@@ -86,6 +86,7 @@ export const MODEL_SETS = {
     ...[0, 1].map((v) => ({ kind: 'com', type: 'centroComercialGrande', e: 4, v, w: 2, label: `centroComercialGrande v${v}` })),
     ...[0, 1].map((v) => ({ kind: 'ind', type: 'fabricaGrande', e: 3, v, w: 2, label: `fabricaGrande v${v}` })),
   ],
+  icon: () => ['coltejer', 'torreNaranja', 'bdBacata'].map((t) => ({ kind: 'off', type: t, e: 6, v: 0, w: 3, label: t })),
   pub: () => Object.keys(PUBLIC).map((t) => ({ kind: 'pub', type: t, w: PUBLIC[t].w, label: PUBLIC[t].name })),
   ind: () => Object.keys(IND_TYPES).flatMap((t) => [0, 1].map((v) => ({ kind: 'ind', type: t, e: 3, v, label: `${t} v${v}` }))),
 };

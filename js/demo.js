@@ -2,7 +2,7 @@
 // caminos destapados en la ladera occidental, servicios concentrados al oriente y Metrocable al occidente.
 import { N } from './scene.js';
 import {
-  G, buildRoad, paintZone, canPlacePublic, placePublic, flush, step, markDirty, zoneProblem, tile,
+  G, buildRoad, paintZone, canPlacePublic, placePublic, flush, step, markDirty, zoneProblem, tile, ensureIcons,
 } from './game.js';
 import { roadPlan } from './roads.js';
 import * as TR from './transit.js';
@@ -70,6 +70,11 @@ export function buildDemo() {
       if (z) paintZone([{ x: x + O, y: y + O }], z);
     }
   }
+  // centro de oficinas junto a la troncal: lotes amplios donde caben los rascacielos emblemáticos
+  for (const [y0, y1] of [[32, 38], [40, 45]]) for (let y = y0; y <= y1; y++) for (let x = 37; x <= 43; x++) {
+    const t = tile(x + O, y + O);
+    if (!t.road && !t.bld && !t.stop) t.zone = 12;
+  }
   // bajar la densidad donde la vía o la pendiente no la permiten; quitar lo que no podría crecer
   for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
     const t = tile(x, y);
@@ -93,6 +98,7 @@ export function buildDemo() {
   markDirty('all');
   flush();
   G.money = 3_000_000;
+  ensureIcons(); // los rascacielos emblemáticos se reservan su lote antes de que crezca el resto
   step(140);
   flush();
   G.money = 3_500_000;
