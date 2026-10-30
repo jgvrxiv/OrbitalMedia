@@ -743,10 +743,10 @@ function footprintOptions(k, d, e) {
   if (k === 'i') return [[2, 3, 0.55], [3, 3, 0.3], [3, 4, 0.15]];
   if (d >= 3) return [[2, 2, 0.35], [2, 3, 0.25], [3, 3, 0.25], [3, 4, 0.15]];
   if (d === 2) return [[1, 2, 0.55], [2, 2, 0.3], [2, 3, 0.15]];
-  if (k !== 'r') return [[1, 1, 1]];
+  if (k !== 'r') return [[1, 2, 1]];
   if (e >= 5) return [[2, 3, 1]];
   if (e >= 4) return [[1, 2, 0.7], [2, 2, 0.3]];
-  return e >= 2 ? [[1, 2, 1]] : [[1, 1, 1]];
+  return [[1, 2, 1]];
 }
 
 // busca un lote libre de W (sobre la calle) × D (de fondo) con su frente en la casilla t; devuelve su esquina y tamaño
