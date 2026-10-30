@@ -116,20 +116,17 @@ function bdBacata(B) {
   B.box(-M(4.5), yb, zb, M(4), M(150), M(12), '#d6d6d2', { fl: 40, cw: M(1.4), pick: () => CELL.WIN_SLIDE });
   // torre alta: base de concreto y 9 niveles de vidrio que retroceden hacia la derecha y el frente
   const xl = -M(2.5);
-  const baseW = M(19), baseD = M(23);
+  const baseW = M(19), baseD = M(17);
   B.box(xl + baseW / 2, yb, zb + baseD / 2, baseW, M(24), baseD, '#8d949a', { fl: 6, cw: M(1.6), pick: () => CELL.CURTAIN });
   let y = yb + M(24), pw = baseW, pd = baseD;
   B.box(xl + pw / 2, y, zb + pd / 2, pw + M(0.6), M(0.9), pd + M(0.6), '#ececec');
   y += M(0.9);
   for (let k = 0; k < 9; k++) {
-    const w = baseW - (k + 1) * M(1.4), d = baseD - (k + 1) * M(1.5), hh = M(17);
+    const w = baseW - (k + 1) * M(1.4), d = baseD, hh = M(17); // sólo retrocede el lado derecho
     B.box(xl + w / 2, y, zb + d / 2, w, hh, d, glass, { fl: 4, cw: M(1.5), pick: () => CELL.CURTAIN });
     // terraza que deja el nivel de abajo: losa blanca y jardinera al borde
     B.box(xl + pw / 2, y - M(0.05), zb + pd / 2, pw + M(0.5), M(0.5), pd + M(0.5), '#ececec');
-    if (k % 2 === 0) {
-      B.box(xl + w + (pw - w) / 2, y + M(0.45), zb + pd / 2, M(0.9), M(0.9), pd - M(2), '#4d8f3f');
-      B.box(xl + pw / 2, y + M(0.45), zb + d + (pd - d) / 2, pw - M(2), M(0.9), M(0.9), '#4d8f3f');
-    }
+    if (k % 2 === 0) B.box(xl + w + (pw - w) / 2, y + M(0.45), zb + pd / 2, M(0.9), M(0.9), pd - M(2), '#4d8f3f');
     y += hh;
     pw = w; pd = d;
   }
@@ -138,8 +135,9 @@ function bdBacata(B) {
   B.box(xl + pw / 2, y + M(0.8), zb + pd / 2, pw - M(1), M(28), pd - M(1), '#bcd6e6', { fl: 8, cw: M(1.3), pick: () => CELL.FLOORGLASS, top: '#33414d' });
   B.box(xl + pw / 2, y + M(28.8), zb + pd / 2, pw - M(2), M(2), pd - M(2), '#33414d');
   B.cyl(xl + pw / 2, y + M(30.8), zb + pd / 2, M(0.5), M(14), '#d9d9d9', 6, M(0.1));
-  // columna de escaleras clara en el borde izquierdo
-  B.box(xl + M(1.2), yb, zb + M(6), M(2.4), M(190), M(8), '#d9d9d6', { fl: 50, cw: M(1.2), pick: () => CELL.WIN_SLIDE });
+  // columna estructural blanca en el borde izquierdo (todo el alto, hasta la corona) y columna delgada en el derecho
+  B.box(xl + M(1.6), yb, zb + baseD / 2, M(3.2), M(216) - M(12), baseD + M(0.4), '#e8e8e4');
+  B.box(xl + baseW - M(1.2), yb, zb + baseD / 2, M(2.4), M(120), baseD, '#d6d6d2', { fl: 33, cw: M(1.2), pick: () => CELL.WIN_SLIDE });
   // bloque bajo de ladrillo al frente (la "casona" del conjunto)
   B.box(M(12), yb, M(11), M(14), M(18), M(10), '#8c6a52', { fl: 5, cw: M(2), pick: () => CELL.WIN_SLIDE });
   B.tree(-1.2, 1.2, 0.3); B.tree(0.2, 1.3, 0.3); B.palm(-0.6, 1.35, 0.7, true);
