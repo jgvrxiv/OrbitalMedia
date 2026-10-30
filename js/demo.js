@@ -29,17 +29,17 @@ export function buildDemo() {
   const R = (k, ax, ay, bx, by) => buildRoad(roadPlan({ x: ax + O, y: ay + O }, { x: bx + O, y: by + O }, k), k);
   // fondo del valle
   R('troncal', 34, 3, 34, 60);
-  R('autopista', 26, 1, 26, 62);
+  R('autopista', 24, 1, 24, 62);
   R('avenida', 8, 30, 58, 30);
   R('avenida', 12, 46, 54, 46);
   R('avenida', 14, 16, 54, 16);
   // calles
-  // manzanas de al menos 4 casillas libres (48 m) de lado corto entre vías
-  for (const x of [20, 42, 49, 56]) R('calle', x, 5, x, 58);
+  // manzanas de al menos 4 × 7 casillas libres (48 × 84 m) entre vías
+  for (const x of [44, 52, 60]) R('calle', x, 5, x, 58);
   for (const y of [9, 24, 39, 55]) R('calle', 18, y, 58, y);
   // laderas occidentales: caminos destapados
-  for (const x of [4, 9, 14]) R('tierra', x, 12, x, 54);
-  for (const y of [22, 36, 41, 52]) R('tierra', 2, y, 19, y);
+  for (const x of [3, 11]) R('tierra', x, 12, x, 54);
+  for (const y of [24, 38, 52]) R('tierra', 2, y, 19, y);
   flush();
 
   // servicios: más al oriente (zona rica) y algunos en el centro
@@ -58,7 +58,7 @@ export function buildDemo() {
       const t = tile(x + O, y + O);
       if (t.road || t.bld || t.stop) continue;
       let z = 0;
-      if (y <= 12 && x >= 22 && x <= 33) z = y < 7 ? 9 : 8; // industria al norte, junto a la autopista
+      if (y <= 14 && x >= 22 && x <= 33) z = y < 7 ? 9 : 8; // industria al norte, junto a la autopista
       else if (x < 20) z = 1; // ladera occidental
       else if (x >= 28 && x <= 38 && y >= 26 && y <= 34) z = (x === 35 || x === 33) ? 12 : (y === 31 || y === 29) ? 6 : 3;
       else if (x >= 22 && x <= 44 && y >= 17 && y <= 48) z = (y === 31 || y === 29 || y === 47 || y === 45 || y === 17 || y === 15) ? 5 : (x >= 28 && x <= 40 ? 2 : (x + y) % 9 === 0 ? 4 : 2);

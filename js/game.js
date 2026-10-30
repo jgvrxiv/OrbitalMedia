@@ -740,7 +740,7 @@ const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 // las casas de estrato 1 caben en 1×1; el resto de casas necesita al menos 2 de fondo; los edificios medios son de
 // 1×2 y los altos de 2×2
 function footprintFor(k, d, e) {
-  if (k === 'i') return [1, 1];
+  if (k === 'i') return [2, 3]; // la industria necesita al menos 2 de frente × 3 de fondo
   if (d >= 3) return [2, 2];
   if (d === 2) return [1, 2];
   return k === 'r' && e >= 2 ? [1, 2] : [1, 1];
@@ -759,7 +759,7 @@ function findLot(t, W, D) {
     for (let a = 0; a < W && ok; a++) for (let b = 0; b < D && ok; b++) {
       const x = t.x + lat[0] * side * a - fw[0] * b, y = t.y + lat[1] * side * a - fw[1] * b;
       const c = tile(x, y), i = c && idx(x, y);
-      if (!c || c.road || c.stop || c.bld || c.zone !== t.zone || G.parcels?.has(i) || G.face[i] !== f || G.depth[i] !== b + 1) { ok = false; break; }
+      if (!c || c.road || c.stop || c.bld || !c.zone || ZONES[c.zone].k !== Z.k || G.parcels?.has(i) || G.face[i] !== f || G.depth[i] !== b + 1) { ok = false; break; }
       if (b === 0 && G.access[i] < Z.d) { ok = false; break; }
       cells.push([x, y]);
     }
@@ -822,9 +822,7 @@ function spawn(t) {
     if (tryBig(t, 'c', e)) return true;
     return spawnSized(t, 'com', e, pickComType(Z.d, e, rand), base);
   }
-  if (tryBig(t, 'i', 3)) return true;
-  addBuilding({ ...base, kind: 'ind', e: 3, type: pickIndType(Z.d, rand) });
-  return true;
+  return spawnSized(t, 'ind', 3, pickIndType(Z.d, rand), base);
 }
 
 function simulate() {

@@ -210,12 +210,12 @@ export const BIG_IND = {
 // probabilidad de intentar un lote grande y tipo a elegir: BIG[tipo de zona][densidad][estrato] = [prob, [[tipo, peso]]]
 export const BIG_TABLE = {
   r: {
-    1: { 6: [0.6, [['mansionGrande', 0.6], ['haciendaGrande', 0.4]]] }, // las mansiones son exclusivas del estrato 6
+    1: { 6: [0.6, [['mansionGrande', 1]]] }, // mansiones sólo en estrato 6; la hacienda colonial queda reservada como edificio especial
     2: { 2: [0.3, [['conjuntoCerrado', 1]]], 3: [0.35, [['conjuntoCerrado', 1]]], 4: [0.4, [['conjuntoCerrado', 1]]], 5: [0.45, [['conjuntoCerrado', 1]]], 6: [0.5, [['conjuntoCerrado', 1]]] },
     3: { 5: [0.35, [['torresPodio', 1]]], 6: [0.5, [['torresPodio', 1]]] },
   },
   c: { 3: { 1: [0.4, [['centroComercialGrande', 1]]], 2: [0.5, [['centroComercialGrande', 1]]], 3: [0.55, [['centroComercialGrande', 1]]], 4: [0.55, [['centroComercialGrande', 1]]], 5: [0.55, [['centroComercialGrande', 1]]], 6: [0.55, [['centroComercialGrande', 1]]] } },
-  i: { 2: { 3: [0.3, [['fabricaGrande', 1]]] }, 3: { 3: [0.45, [['fabricaGrande', 1]]] } },
+  i: {}, // la industria ahora usa lotes de 2×3 con modelos estirados
 };
 
 // Devuelve el tipo de lote grande a intentar (o null) para una zona k ('r', 'c', 'i'), densidad d y estrato e.

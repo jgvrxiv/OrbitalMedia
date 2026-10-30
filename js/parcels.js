@@ -6,7 +6,7 @@
 import { ROADS } from './roads.js';
 import { DIAG, diagLines } from './roadnet.js';
 
-const ORTHO_DEPTH = 2, DIAG_DEPTH = 3;
+const ORTHO_DEPTH = 3, DIAG_DEPTH = 3;
 
 // Devuelve { parcels, region }:
 //  parcels: Map(índice -> { px, py, ang, face, dens, depth, diag }) con px, py en coordenadas de casilla
